@@ -9,6 +9,10 @@ common:
   integration_platforms:
     - custom_plank
     - nucleo_f302r8
+
+  modules:
+    - lvgl
+
 tests:
   app.default: {}
   app.debug:
