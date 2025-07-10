@@ -13,3 +13,43 @@
 		input = <&gt911>;
 	};
 };
+
+/*
+/ {
+
+};
+*/
+
+/ {
+	fstab {
+		compatible = "zephyr,fstab";
+		ffs1: ffs1 {
+			compatible = "zephyr,fstab,fatfs";
+			automount;
+			disk-access;
+			mount-point = "/RAM:";
+		};
+
+        ffs2: ffs2 {
+			compatible = "zephyr,fstab,fatfs";
+			automount;
+			disk-access;
+			mount-point = "/FLASHDISK:";
+		};
+	};
+
+	ramdisk0 {
+		compatible = "zephyr,ram-disk";
+		disk-name = "RAM";
+		sector-size = <512>;
+		sector-count = <128>;
+	};
+
+    flashdisk0: flash-disk {
+        compatible = "zephyr,flash-disk";
+        flash-controller = <&mx66lm1g45>;
+        partition = <&extflash_partition>;
+        disk-name = "FLASHDISK";
+        cache-size = <4096>;
+    };
+};
