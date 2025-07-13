@@ -1,0 +1,36 @@
+diff --git a/drivers/usb/device/usb_dc_stm32.c b/drivers/usb/device/usb_dc_stm32.c
+index 48e2f1d49f3..89760c2e64c 100644
+--- a/drivers/usb/device/usb_dc_stm32.c
++++ b/drivers/usb/device/usb_dc_stm32.c
+@@ -430,8 +430,11 @@ static int usb_dc_stm32_clock_enable(void)
+ #elif defined(CONFIG_SOC_SERIES_STM32U5X)
+ 	LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_USBPHY);
+ 	/* Both OTG HS and USBPHY sleep clock MUST be disabled here at the same time */
+-	LL_AHB2_GRP1_DisableClockStopSleep(LL_AHB2_GRP1_PERIPH_OTG_HS |
+-						LL_AHB2_GRP1_PERIPH_USBPHY);
++	if (strcmp(CONFIG_BOARD, "stm32u5g9j_dk2") != 0)
++	{
++		LL_AHB2_GRP1_DisableClockStopSleep(LL_AHB2_GRP1_PERIPH_OTG_HS |
++							LL_AHB2_GRP1_PERIPH_USBPHY);
++	}
+ #elif DT_HAS_COMPAT_STATUS_OKAY(st_stm32n6_otghs)
+ 	/* Reset specific configuration bits before setting new values */
+ 	USB1_HS_PHYC->USBPHYC_CR &= ~USB_USBPHYC_CR_FSEL_Msk;
+diff --git a/drivers/usb/udc/udc_stm32.c b/drivers/usb/udc/udc_stm32.c
+index 8926c52d047..386cd1e35fb 100644
+--- a/drivers/usb/udc/udc_stm32.c
++++ b/drivers/usb/udc/udc_stm32.c
+@@ -1144,8 +1144,11 @@ static int priv_clock_enable(void)
+ #elif defined(CONFIG_SOC_SERIES_STM32U5X)
+ 	LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_USBPHY);
+ 	/* Both OTG HS and USBPHY sleep clock MUST be disabled here at the same time */
+-	LL_AHB2_GRP1_DisableClockStopSleep(LL_AHB2_GRP1_PERIPH_OTG_HS |
+-						LL_AHB2_GRP1_PERIPH_USBPHY);
++	if (strcmp(CONFIG_BOARD, "stm32u5g9j_dk2") != 0)
++	{
++		LL_AHB2_GRP1_DisableClockStopSleep(LL_AHB2_GRP1_PERIPH_OTG_HS |
++							LL_AHB2_GRP1_PERIPH_USBPHY);
++	}
+ #elif DT_HAS_COMPAT_STATUS_OKAY(st_stm32n6_otghs)
+ 	/* Reset specific configuration bits before setting new values */
+ 	USB1_HS_PHYC->USBPHYC_CR &= ~USB_USBPHYC_CR_FSEL_Msk;
