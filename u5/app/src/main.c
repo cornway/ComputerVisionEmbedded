@@ -18,6 +18,12 @@
 #include <ff.h>
 #include <stdio.h>
 
+#include <zephyr/usb/usb_device.h>
+#include <zephyr/usb/usbd.h>
+#include <zephyr/usb/class/usbd_msc.h>
+
+#include <sample_usbd.h>
+
 #define LOG_LEVEL CONFIG_LOG_DEFAULT_LEVEL
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(app);
@@ -28,6 +34,30 @@ FS_FSTAB_DECLARE_ENTRY(AUTOMOUNT_NODE);
 #define FILE_PATH "/FLASHDISK:/hello.txt"
 
 static uint32_t count;
+static struct usbd_context *sample_usbd;
+
+USBD_DEFINE_MSC_LUN(flash, "FLASHDISK", "Zephyr", "FlashDisk", "0.00");
+
+static int enable_usb_device_next(void)
+{
+	int err;
+
+	sample_usbd = sample_usbd_init_device(NULL);
+	if (sample_usbd == NULL) {
+		LOG_ERR("Failed to initialize USB device");
+		return -ENODEV;
+	}
+
+	err = usbd_enable(sample_usbd);
+	if (err) {
+		LOG_ERR("Failed to enable device support");
+		return err;
+	}
+
+	LOG_DBG("USB device support enabled");
+
+	return 0;
+}
 
 static void lv_btn_click_callback(lv_event_t *e)
 {
@@ -97,8 +127,14 @@ int main(void)
 	lv_obj_t *hello_world_label;
 	lv_obj_t *count_label;
 
-	fs_example();
+	//fs_example();
 
+	int ret = 0;
+	ret = enable_usb_device_next();
+
+	if (ret != 0) {
+		LOG_ERR("Failed to enable USB");
+	}
 	display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 	if (!device_is_ready(display_dev)) {
 		LOG_ERR("Device not ready, aborting test");
