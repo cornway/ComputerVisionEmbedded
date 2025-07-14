@@ -22,7 +22,7 @@
 			compatible = "zephyr,fstab,fatfs";
 			automount;
 			disk-access;
-			mount-point = "/FLASHDISK:";
+			mount-point = "/NAND:";
 		};
 	};
 
@@ -30,7 +30,7 @@
         compatible = "zephyr,flash-disk";
         flash-controller = <&mx66lm1g45>;
         partition = <&extflash_partition>;
-        disk-name = "FLASHDISK";
+        disk-name = "NAND";
         cache-size = <4096>;
     };
 };

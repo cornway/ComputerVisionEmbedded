@@ -15,7 +15,6 @@
 #include <lvgl_input_device.h>
 
 #include <zephyr/fs/fs.h>
-#include <ff.h>
 #include <stdio.h>
 
 #include <zephyr/usb/usb_device.h>
@@ -23,6 +22,7 @@
 #include <zephyr/usb/class/usbd_msc.h>
 
 #include <sample_usbd.h>
+#include <lvgl_fs.h>
 
 #define LOG_LEVEL CONFIG_LOG_DEFAULT_LEVEL
 #include <zephyr/logging/log.h>
@@ -31,12 +31,10 @@ LOG_MODULE_REGISTER(app);
 #define AUTOMOUNT_NODE DT_NODELABEL(ffs2)
 FS_FSTAB_DECLARE_ENTRY(AUTOMOUNT_NODE);
 
-#define FILE_PATH "/FLASHDISK:/hello.txt"
-
 static uint32_t count;
 static struct usbd_context *sample_usbd;
 
-USBD_DEFINE_MSC_LUN(flash, "FLASHDISK", "Zephyr", "FlashDisk", "0.00");
+USBD_DEFINE_MSC_LUN(flash, "NAND", "Zephyr", "FlashDisk", "0.00");
 
 static int enable_usb_device_next(void)
 {
@@ -66,58 +64,60 @@ static void lv_btn_click_callback(lv_event_t *e)
 	count = 0;
 }
 
-int fs_example ()
+void fs_example ()
 {
-	struct fs_file_t file;
-	int rc;
-	static const char data[] = "Hello";
 	/* You can get direct mount point to automounted node too */
-	struct fs_mount_t *auto_mount_point = &FS_FSTAB_ENTRY(AUTOMOUNT_NODE);
-	struct fs_dirent stat;
+	struct fs_mount_t *mp = &FS_FSTAB_ENTRY(AUTOMOUNT_NODE);
+	struct fs_dir_t dir;
+	struct fs_statvfs sbuf;
+	int rc;
 
-	fs_file_t_init(&file);
+	fs_dir_t_init(&dir);
+	/* Allow log messages to flush to avoid interleaved output */
+	k_sleep(K_MSEC(50));
 
-	rc = fs_open(&file, FILE_PATH, FS_O_CREATE | FS_O_WRITE);
-	if (rc != 0) {
-		LOG_ERR("Accessing filesystem failed");
-		return rc;
+	printk("Mount %s\n", mp->mnt_point);
+
+	rc = fs_statvfs(mp->mnt_point, &sbuf);
+	if (rc < 0) {
+		printk("FAIL: statvfs: %d\n", rc);
+		return;
 	}
 
-	rc = fs_write(&file, data, strlen(data));
-	if (rc != strlen(data)) {
-		LOG_ERR("Writing filesystem failed");
-		return rc;
+	printk("%s: bsize = %lu ; frsize = %lu ;"
+	       " blocks = %lu ; bfree = %lu\n",
+	       mp->mnt_point,
+	       sbuf.f_bsize, sbuf.f_frsize,
+	       sbuf.f_blocks, sbuf.f_bfree);
+
+	rc = fs_opendir(&dir, mp->mnt_point);
+	printk("%s opendir: %d\n", mp->mnt_point, rc);
+
+	if (rc < 0) {
+		LOG_ERR("Failed to open directory");
 	}
 
-	rc = fs_close(&file);
-	if (rc != 0) {
-		LOG_ERR("Closing file failed");
-		return rc;
+	while (rc >= 0) {
+		struct fs_dirent ent = { 0 };
+
+		rc = fs_readdir(&dir, &ent);
+		if (rc < 0) {
+			LOG_ERR("Failed to read directory entries");
+			break;
+		}
+		if (ent.name[0] == 0) {
+			printk("End of files\n");
+			break;
+		}
+		printk("  %c %u %s\n",
+		       (ent.type == FS_DIR_ENTRY_FILE) ? 'F' : 'D',
+		       ent.size,
+		       ent.name);
 	}
 
-	/* You can unmount the automount node */
-	rc = fs_unmount(auto_mount_point);
-	if (rc != 0) {
-		LOG_ERR("Failed to do unmount");
-		return rc;
-	};
+	(void)fs_closedir(&dir);
 
-	/* And mount it back */
-	rc = fs_mount(auto_mount_point);
-	if (rc != 0) {
-		LOG_ERR("Failed to remount the auto-mount node");
-		return rc;
-	}
-
-	/* Is the file still there? */
-	rc = fs_stat(FILE_PATH, &stat);
-	if (rc != 0) {
-		LOG_ERR("File status check failed %d", rc);
-		return rc;
-	}
-
-	LOG_INF("Filesystem access successful");
-	return rc;
+	return;
 }
 
 int main(void)
@@ -126,8 +126,9 @@ int main(void)
 	const struct device *display_dev;
 	lv_obj_t *hello_world_label;
 	lv_obj_t *count_label;
+	lv_obj_t * img1;
 
-	//fs_example();
+	fs_example();
 
 	int ret = 0;
 	ret = enable_usb_device_next();
@@ -140,6 +141,8 @@ int main(void)
 		LOG_ERR("Device not ready, aborting test");
 		return 0;
 	}
+
+	lvgl_fs_sample();
 
 	if (IS_ENABLED(CONFIG_LV_Z_POINTER_INPUT)) {
 		lv_obj_t *hello_world_button;
@@ -158,6 +161,12 @@ int main(void)
 
 	count_label = lv_label_create(lv_screen_active());
 	lv_obj_align(count_label, LV_ALIGN_BOTTOM_MID, 0, 0);
+
+	img1 = lv_image_create(lv_screen_active());
+	lv_img_set_src(img1, "S:/sample.jpg");
+	//lv_obj_set_size(img1, 200, 120); // Set the desired size
+	//lv_obj_set_pos(img1, 100, 100); // Set the desired position
+	lv_obj_center(img1);
 
 	lv_timer_handler();
 	display_blanking_off(display_dev);

@@ -29,4 +29,5 @@ FILE(GLOB app_sources src/*.c)
 target_sources(app PRIVATE
     src/main.c
     src/sample_usbd_init.c
+    src/lvgl_fs_sample.c
 )
