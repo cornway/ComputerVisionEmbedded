@@ -1,0 +1,8 @@
+
+
+config TFLITE_LIB
+	bool "Support for tflite custom library"
+    imply TENSORFLOW_LITE_MICRO
+    # imply CONFIG_TENSORFLOW_LITE_MICRO_CMSIS_NN_KERNELS
+	help
+	  This option enables the 'tflite custom' library

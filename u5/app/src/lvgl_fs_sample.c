@@ -186,3 +186,25 @@ static lv_fs_res_t _dir_close_cb(lv_fs_drv_t *drv, void *rdir_p)
     free(d);
     return LV_FS_RES_OK;
 }
+
+uint8_t *lvgl_fs_load_raw (const char *path, uint8_t *buffer, size_t size)
+{
+    struct fs_file_t file;
+    fs_file_t_init(&file);
+
+    int ret = fs_open(&file, path, FS_O_READ);
+    if (ret < 0) {
+        LOG_ERR("Failed to open %s: %d\n", path, ret);
+        return NULL;
+    }
+
+    ssize_t read_bytes = fs_read(&file, buffer, size);
+    fs_close(&file);
+
+    if (read_bytes != size) {
+        LOG_ERR("Read %d bytes, expected %d\n", (int)read_bytes, (int)size);
+        return NULL;
+    }
+
+    return buffer;
+}

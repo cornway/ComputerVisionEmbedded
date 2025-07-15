@@ -28,6 +28,10 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(app);
 
+#if defined(CONFIG_TFLITE_LIB)
+#include <app/lib/tflm.h>
+#endif
+
 #define AUTOMOUNT_NODE DT_NODELABEL(ffs2)
 FS_FSTAB_DECLARE_ENTRY(AUTOMOUNT_NODE);
 
@@ -126,7 +130,6 @@ int main(void)
 	const struct device *display_dev;
 	lv_obj_t *hello_world_label;
 	lv_obj_t *count_label;
-	lv_obj_t * img1;
 
 	fs_example();
 
@@ -162,11 +165,32 @@ int main(void)
 	count_label = lv_label_create(lv_screen_active());
 	lv_obj_align(count_label, LV_ALIGN_BOTTOM_MID, 0, 0);
 
-	img1 = lv_image_create(lv_screen_active());
-	lv_img_set_src(img1, "S:/sample.jpg");
-	//lv_obj_set_size(img1, 200, 120); // Set the desired size
-	//lv_obj_set_pos(img1, 100, 100); // Set the desired position
-	lv_obj_center(img1);
+	#define IMG_WIDTH       96
+	#define IMG_HEIGHT      96
+	#define IMG_BPP         3
+	#define IMG_SIZE        (IMG_WIDTH * IMG_HEIGHT * IMG_BPP)
+
+	static uint8_t img_buf[IMG_SIZE];
+	
+	if (lvgl_fs_load_raw("/NAND:/test.bin", img_buf, IMG_SIZE))
+	{
+		static lv_img_dsc_t img_dsc;
+		img_dsc.header.w = IMG_WIDTH;
+		img_dsc.header.h = IMG_HEIGHT;
+		img_dsc.header.cf = LV_COLOR_FORMAT_RGB888; // RGB888
+		img_dsc.data_size = IMG_SIZE;
+		img_dsc.data = img_buf;
+
+		lv_obj_t *img = lv_img_create(lv_screen_active());
+
+#if defined(CONFIG_TFLITE_LIB)
+		tflm_init();
+		inference_task(img_buf);
+#endif
+
+		lv_img_set_src(img, &img_dsc);
+		lv_obj_center(img);
+	}
 
 	lv_timer_handler();
 	display_blanking_off(display_dev);

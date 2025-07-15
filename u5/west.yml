@@ -25,6 +25,7 @@ manifest:
           - cmsis_6    # required by the ARM port for Cortex-M
           - hal_nordic # required by the custom_plank board (Nordic based)
           - hal_stm32  # required by the nucleo_f302r8 board (STM32 based)
+          - tflite-micro
     - name: fatfs
       revision: 16245c7c41d2b79e74984f49b5202551786b8a9b
       path: modules/fs/fatfs
