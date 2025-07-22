@@ -12,9 +12,10 @@ if(NOT ZEPHYR_BASE)
   message(FATAL_ERROR "ZEPHYR_BASE env variable is empty, do : source path/to/zephyr/zephyr-env.sh")
 endif()
 
-#TODO : drag proper toolchain !
-set(ZEPHYR_CXX_FLAGS "-fno-strict-aliasing \
+set(ZEPHYR_COMM_FLAGS "-fno-strict-aliasing \
   -Os \
+  -mlong-calls \
+  -Wno-frame-address \
   -fcheck-new \
   -std=c++${CMAKE_CXX_STANDARD} \
   -Wno-register \
@@ -44,8 +45,19 @@ set(ZEPHYR_CXX_FLAGS "-fno-strict-aliasing \
   -fdata-sections\
   -imacros ${ZEPHYR_BASE}/include/zephyr/toolchain/zephyr_stdint.h")
 
-set(CMAKE_C_FLAGS "-mlong-calls -Wno-frame-address" CACHE STRING "C Compiler Base Flags")
-set(CMAKE_CXX_FLAGS "${ZEPHYR_CXX_FLAGS} -mlong-calls -Wno-frame-address" CACHE STRING "C++ Compiler Base Flags")
+#TODO : drag proper toolchain !
+set(ZEPHYR_CXX_FLAGS "-std=c++${CMAKE_CXX_STANDARD} \
+  -Wno-deprecated-enum-enum-conversion \
+  -Wno-register \
+  -Wno-volatile")
+
+set(ZEPHYR_C_FLAGS "")
+
+#-DSIZEOF_SIZE_T=4
+set(COMM_FLAGS "-DSIZEOF_SIZE_T=4")
+
+set(CMAKE_C_FLAGS "${ZEPHYR_COMM_FLAGS} ${ZEPHYR_C_FLAGS} ${COMM_FLAGS}" CACHE STRING "C Compiler Base Flags")
+set(CMAKE_CXX_FLAGS "${ZEPHYR_COMM_FLAGS} ${ZEPHYR_CXX_FLAGS} ${COMM_FLAGS}" CACHE STRING "C++ Compiler Base Flags")
 
 # Can be removed after gcc 5.2.0 support is removed (ref GCC_NOT_5_2_0)
 set(CMAKE_EXE_LINKER_FLAGS "-nostdlib" CACHE STRING "Linker Base Flags")

@@ -180,20 +180,31 @@ int main(void)
 	static uint8_t edges_buf[IMG_SIZE/IMG_BPP];
 
 	uint32_t start_ms = k_uptime_get_32();
-	edge_detect(image_data(), edges_buf, IMG_WIDTH, IMG_HEIGHT, 50.0, 150.0);
-	uint32_t end_ms = k_uptime_get_32();
+	//edge_detect(image_data(), edges_buf, IMG_WIDTH, IMG_HEIGHT, 50.0, 150.0);
 
-	static lv_img_dsc_t img_dsc;
-	img_dsc.header.w = IMG_WIDTH;
-	img_dsc.header.h = IMG_HEIGHT;
-	img_dsc.header.cf = LV_COLOR_FORMAT_A8; //
-	img_dsc.data_size = IMG_SIZE/IMG_BPP;
-	img_dsc.data = edges_buf;
+	int width, height;
+	if (0 == edge_demo("/NAND:/sample2.png", edges_buf, &width, &height, 50.0, 150.0))
+	{
 
-	lv_obj_t *img = lv_img_create(lv_screen_active());
+		uint32_t end_ms = k_uptime_get_32();
+		uint32_t elapsed = end_ms - start_ms;
 
-	lv_img_set_src(img, &img_dsc);
-	lv_obj_center(img);
+		printf("Routine took %u ms\n", elapsed);
+
+		static lv_img_dsc_t img_dsc;
+		img_dsc.header.w = IMG_WIDTH;
+		img_dsc.header.h = IMG_HEIGHT;
+		img_dsc.header.cf = LV_COLOR_FORMAT_A8; //
+		img_dsc.data_size = IMG_SIZE/IMG_BPP;
+		img_dsc.data = edges_buf;
+
+		lv_obj_t *img = lv_img_create(lv_screen_active());
+
+		lv_img_set_src(img, &img_dsc);
+		lv_obj_center(img);
+	}
+	
+
 #else
 	#define IMG_WIDTH       96
 	#define IMG_HEIGHT      96
@@ -206,9 +217,6 @@ int main(void)
 	
 	if (lvgl_fs_load_raw("/NAND:/test.bin", img_buf, IMG_SIZE))
 	{
-
-
-		edge_detect(img_buf, edges_buf, IMG_WIDTH, IMG_HEIGHT, 50.0, 150.0);
 
 		static lv_img_dsc_t img_dsc;
 		img_dsc.header.w = IMG_WIDTH;
@@ -231,10 +239,6 @@ int main(void)
 
 	lv_timer_handler();
 	display_blanking_off(display_dev);
-
-	uint32_t elapsed = end_ms - start_ms;
-
-	printf("Routine took %u ms\n", elapsed);
 
 	while (1) {
 		if ((count % 100) == 0U) {

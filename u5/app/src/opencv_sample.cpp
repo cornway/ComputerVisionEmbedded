@@ -2,6 +2,11 @@
 
 
 #if defined(CONFIG_OPENCV_LIB)
+
+#include <stddef.h>
+#include <stdlib.h>
+#include <errno.h>
+
 #include <iostream>
 #include <cstring>
 
@@ -86,6 +91,29 @@ extern "C" void edge_detect(const uint8_t *rgb_in,
 
     // 4) Copy result back into your buffer (row‐major, one byte per pixel)
     std::memcpy(edges_out, edges.data, width * height);
+}
+
+extern "C" int edge_demo(const char *path,
+                 uint8_t *edges_out,
+                 int *width, int *height,
+                 double low_thresh = 50.0,
+                 double high_thresh = 150.0)
+{
+    cv::Mat src = cv::imread(path, cv::IMREAD_COLOR);
+    if (src.empty()) {
+        printf("Failed to read %s\n", path);
+        return -1;
+    }
+
+    cv::Mat gray, edges;
+    cv::cvtColor(src, gray, cv::COLOR_BGR2GRAY);   // BGR if desktop; RGB if you built differently
+    cv::Canny(gray, edges, 50.0, 150.0);
+
+    std::memcpy(edges_out, edges.data, edges.total());
+    *width = edges.cols;
+    *height = edges.rows;
+
+    return 0;
 }
 
 #else
