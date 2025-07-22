@@ -32,6 +32,10 @@ LOG_MODULE_REGISTER(app);
 #include <app/lib/tflm.h>
 #endif
 
+#if defined(CONFIG_OPENCV_LIB)
+#include <opencv_sample.h>
+#endif
+
 #define AUTOMOUNT_NODE DT_NODELABEL(ffs2)
 FS_FSTAB_DECLARE_ENTRY(AUTOMOUNT_NODE);
 
@@ -126,10 +130,11 @@ void fs_example ()
 
 int main(void)
 {
-	char count_str[11] = {0};
+	char count_str[64] = {0};
 	const struct device *display_dev;
-	lv_obj_t *hello_world_label;
 	lv_obj_t *count_label;
+
+	opencv_test();
 
 	fs_example();
 
@@ -147,11 +152,12 @@ int main(void)
 
 	lvgl_fs_sample();
 
+	lv_obj_t *hello_world_label;
 	if (IS_ENABLED(CONFIG_LV_Z_POINTER_INPUT)) {
 		lv_obj_t *hello_world_button;
 
 		hello_world_button = lv_button_create(lv_screen_active());
-		lv_obj_align(hello_world_button, LV_ALIGN_CENTER, 0, -15);
+		lv_obj_align(hello_world_button, LV_ALIGN_TOP_LEFT, 0, -15);
 		lv_obj_add_event_cb(hello_world_button, lv_btn_click_callback, LV_EVENT_CLICKED,
 				    NULL);
 		hello_world_label = lv_label_create(hello_world_button);
@@ -160,26 +166,56 @@ int main(void)
 	}
 
 	lv_label_set_text(hello_world_label, "Hello world!");
-	lv_obj_align(hello_world_label, LV_ALIGN_CENTER, 0, 0);
+	lv_obj_align(hello_world_label, LV_ALIGN_TOP_LEFT, 0, 0);
 
 	count_label = lv_label_create(lv_screen_active());
 	lv_obj_align(count_label, LV_ALIGN_BOTTOM_MID, 0, 0);
 
+#if defined(CONFIG_OPENCV_LIB)
+	#define IMG_WIDTH       320
+	#define IMG_HEIGHT      240
+	#define IMG_BPP         3
+	#define IMG_SIZE        (IMG_WIDTH * IMG_HEIGHT * IMG_BPP)
+
+	static uint8_t edges_buf[IMG_SIZE/IMG_BPP];
+
+	uint32_t start_ms = k_uptime_get_32();
+	edge_detect(image_data(), edges_buf, IMG_WIDTH, IMG_HEIGHT, 50.0, 150.0);
+	uint32_t end_ms = k_uptime_get_32();
+
+	static lv_img_dsc_t img_dsc;
+	img_dsc.header.w = IMG_WIDTH;
+	img_dsc.header.h = IMG_HEIGHT;
+	img_dsc.header.cf = LV_COLOR_FORMAT_A8; //
+	img_dsc.data_size = IMG_SIZE/IMG_BPP;
+	img_dsc.data = edges_buf;
+
+	lv_obj_t *img = lv_img_create(lv_screen_active());
+
+	lv_img_set_src(img, &img_dsc);
+	lv_obj_center(img);
+#else
 	#define IMG_WIDTH       96
 	#define IMG_HEIGHT      96
 	#define IMG_BPP         3
 	#define IMG_SIZE        (IMG_WIDTH * IMG_HEIGHT * IMG_BPP)
 
 	static uint8_t img_buf[IMG_SIZE];
+
+	static uint8_t edges_buf[IMG_SIZE/IMG_BPP];
 	
 	if (lvgl_fs_load_raw("/NAND:/test.bin", img_buf, IMG_SIZE))
 	{
+
+
+		edge_detect(img_buf, edges_buf, IMG_WIDTH, IMG_HEIGHT, 50.0, 150.0);
+
 		static lv_img_dsc_t img_dsc;
 		img_dsc.header.w = IMG_WIDTH;
 		img_dsc.header.h = IMG_HEIGHT;
-		img_dsc.header.cf = LV_COLOR_FORMAT_RGB888; // RGB888
-		img_dsc.data_size = IMG_SIZE;
-		img_dsc.data = img_buf;
+		img_dsc.header.cf = LV_COLOR_FORMAT_A8; //
+		img_dsc.data_size = IMG_SIZE/IMG_BPP;
+		img_dsc.data = edges_buf;
 
 		lv_obj_t *img = lv_img_create(lv_screen_active());
 
@@ -191,9 +227,14 @@ int main(void)
 		lv_img_set_src(img, &img_dsc);
 		lv_obj_center(img);
 	}
+#endif
 
 	lv_timer_handler();
 	display_blanking_off(display_dev);
+
+	uint32_t elapsed = end_ms - start_ms;
+
+	printf("Routine took %u ms\n", elapsed);
 
 	while (1) {
 		if ((count % 100) == 0U) {

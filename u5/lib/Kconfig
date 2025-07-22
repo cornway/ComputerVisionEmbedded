@@ -5,4 +5,7 @@ menu "Custom libraries"
 
 rsource "tflite/Kconfig"
 
+config OPENCV_LIB
+	bool "Support for opencv custom library"
+
 endmenu

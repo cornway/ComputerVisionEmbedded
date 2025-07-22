@@ -27,9 +27,14 @@ project(app)
 set(NO_THREADSAFE_STATICS $<TARGET_PROPERTY:compiler-cpp,no_threadsafe_statics>)
 zephyr_compile_options($<$<COMPILE_LANGUAGE:CXX>:${NO_THREADSAFE_STATICS}>)
 
-target_include_directories(app PRIVATE src)
+if (CONFIG_OPENCV_LIB)
+    include(opencv.cmake)
+endif()
 
-FILE(GLOB app_sources src/*.c)
+target_include_directories(app PRIVATE
+    src
+)
+
 target_sources(app PRIVATE
     src/main.c
     src/sample_usbd_init.c
