@@ -23,6 +23,15 @@ int edge_demo(const char *path,
                  double low_thresh,
                  double high_thresh);
 
+int object_detect (const char *img_path, const char *cascade_path);
+          
+int object_detect_2(const char* img_path,
+                             const char* cascade_path,
+                             uint8_t**   out_buf,     // RGB888 buffer you can feed LVGL
+                             int*        out_w,
+                             int*        out_h,
+                             size_t*     out_data_sz);
+
 #endif
 
 #ifdef __cplusplus

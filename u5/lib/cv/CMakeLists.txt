@@ -42,10 +42,10 @@ set(BUILD_JAVA                   OFF)
 set(BUILD_opencv_python          OFF)
 set(BUILD_opencv_java            OFF)
 
-set(BUILD_opencv_apps            OFF)
-set(BUILD_opencv_calib3d         OFF)
-set(BUILD_opencv_features2d      OFF)
-set(BUILD_opencv_flann           OFF)
+#set(BUILD_opencv_apps            OFF)
+#set(BUILD_opencv_calib3d         OFF)
+#set(BUILD_opencv_features2d      OFF)
+#set(BUILD_opencv_flann           OFF)
 set(BUILD_opencv_ml              OFF) #
 set(BUILD_opencv_photo           OFF) #
 set(BUILD_opencv_stitching       OFF) #
@@ -54,6 +54,7 @@ set(BUILD_opencv_videoio         OFF) #
 set(BUILD_opencv_highgui         OFF) #
 set(BUILD_opencv_imgcodecs       ON) #
 set(BUILD_opencv_imgproc         ON)
+set(BUILD_opencv_objdetect       ON)
 set(BUILD_opencv_gapi            OFF)
 
 set(BUILD_PACKAGE                OFF)

@@ -172,6 +172,7 @@ int main(void)
 	lv_obj_align(count_label, LV_ALIGN_BOTTOM_MID, 0, 0);
 
 #if defined(CONFIG_OPENCV_LIB)
+#if 0
 	#define IMG_WIDTH       320
 	#define IMG_HEIGHT      240
 	#define IMG_BPP         3
@@ -204,7 +205,12 @@ int main(void)
 		lv_obj_center(img);
 	}
 	
+#else 
 
+	// When you’re done with the image (and no longer show it), free the buffer:
+	//free((void*)img_dsc.data);
+
+#endif
 #else
 	#define IMG_WIDTH       96
 	#define IMG_HEIGHT      96
@@ -240,13 +246,43 @@ int main(void)
 	lv_timer_handler();
 	display_blanking_off(display_dev);
 
+	uint32_t prev_count = count;
 	while (1) {
-		if ((count % 100) == 0U) {
-			sprintf(count_str, "%d", count/100U);
-			lv_label_set_text(count_label, count_str);
-		}
+		sprintf(count_str, "%d", count);
+		lv_label_set_text(count_label, count_str);
 		lv_timer_handler();
+
+		if (count == 0 && prev_count != 0)
+		{
+			//int faces = object_detect("/NAND:/face.png", "/NAND:/alt.xml");
+
+			uint8_t *out_buf;
+			int out_w;
+			int out_h;
+			int out_data_sz;
+
+			int faces = object_detect_2(
+				"/NAND:/face.png", "/NAND:/alt.xml",
+				&out_buf, &out_w, &out_h, &out_data_sz
+			);
+
+			printf("out_w = %u out_h = %u out_data_sz = %u\n", out_w, out_h, out_data_sz);
+
+			static lv_img_dsc_t img_dsc;
+			img_dsc.header.w  = out_w;
+			img_dsc.header.h  = out_h;
+			img_dsc.header.cf = LV_COLOR_FORMAT_RGB888;   // RGB888
+			img_dsc.data_size = out_data_sz;
+			img_dsc.data      = out_buf;
+
+			lv_obj_t* img = lv_img_create(lv_screen_active());
+			lv_img_set_src(img, &img_dsc);
+			lv_obj_center(img);
+		}
+
+		prev_count = count;
+
 		++count;
-		k_sleep(K_MSEC(10));
+		k_sleep(K_MSEC(100));
 	}
 }
