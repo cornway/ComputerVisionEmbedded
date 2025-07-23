@@ -4,4 +4,5 @@
 menu "Drivers"
 rsource "blink/Kconfig"
 rsource "sensor/Kconfig"
+rsource "nema/Kconfig"
 endmenu

@@ -6,3 +6,6 @@ add_subdirectory_ifdef(CONFIG_BLINK blink)
 
 # Out-of-tree drivers for existing driver classes
 add_subdirectory_ifdef(CONFIG_SENSOR sensor)
+
+# Out-of-tree drivers for existing driver classes STM32 NEMA 2DGPU
+add_subdirectory_ifdef(CONFIG_NEMA nema)

@@ -8,13 +8,14 @@
 #include <zephyr/dt-bindings/lvgl/lvgl.h>
 
 / {
+	chosen: chosen {
+		zephyr,nema = &nema0;
+	};
+
 	pointer {
 		compatible = "zephyr,lvgl-pointer-input";
 		input = <&gt911>;
 	};
-};
-
-/ {
 	fstab {
 		compatible = "zephyr,fstab";
 
@@ -33,4 +34,9 @@
         disk-name = "NAND";
         cache-size = <4096>;
     };
+
+	nema0: nema-gfx {
+		compatible = "st,nema-gfx";
+		status = "okay";
+	};
 };

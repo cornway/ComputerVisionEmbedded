@@ -1,0 +1,9 @@
+
+description: |
+  st GPU2D, nema gfx driver
+
+compatible: "st,nema-gfx"
+
+include: base.yaml
+
+properties: {}

@@ -31,6 +31,10 @@ if (CONFIG_OPENCV_LIB)
     include(opencv.cmake)
 endif()
 
+if (CONFIG_NEMA)
+    include(nema.cmake)
+endif()
+
 target_include_directories(app PRIVATE
     src
 )

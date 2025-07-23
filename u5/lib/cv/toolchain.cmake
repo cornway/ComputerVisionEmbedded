@@ -26,6 +26,9 @@ set(ZEPHYR_COMM_FLAGS "-fno-strict-aliasing \
   -fdiagnostics-color=always \
   -mcpu=cortex-m33 \
   -mthumb \
+  -mfpu=fpv5-sp-d16 \
+  -mfloat-abi=softfp \
+  -fsingle-precision-constant \
   -mabi=aapcs \
   -mfp16-format=ieee \
   -Wall \
@@ -53,8 +56,7 @@ set(ZEPHYR_CXX_FLAGS "-std=c++${CMAKE_CXX_STANDARD} \
 
 set(ZEPHYR_C_FLAGS "")
 
-#-DSIZEOF_SIZE_T=4
-set(COMM_FLAGS "-DSIZEOF_SIZE_T=4")
+set(COMM_FLAGS "")
 
 set(CMAKE_C_FLAGS "${ZEPHYR_COMM_FLAGS} ${ZEPHYR_C_FLAGS} ${COMM_FLAGS}" CACHE STRING "C Compiler Base Flags")
 set(CMAKE_CXX_FLAGS "${ZEPHYR_COMM_FLAGS} ${ZEPHYR_CXX_FLAGS} ${COMM_FLAGS}" CACHE STRING "C++ Compiler Base Flags")

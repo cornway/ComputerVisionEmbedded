@@ -50,6 +50,69 @@ index e9a7be7c66..57716842a1 100644
 +#ocv_add_app(interactive-calibration)
 +#ocv_add_app(version)
 +#ocv_add_app(model-diagnostics)
+diff --git a/modules/calib3d/src/chessboard.cpp b/modules/calib3d/src/chessboard.cpp
+index 1801a1cbf4..a698656607 100644
+--- a/modules/calib3d/src/chessboard.cpp
++++ b/modules/calib3d/src/chessboard.cpp
+@@ -2101,7 +2101,7 @@ bool Chessboard::Board::estimateSearchArea(const cv::Point2f &p1,const cv::Point
+     n = p4-p3;
+     norm = float(cv::norm(n));
+     double delta = std::max(3.0F,p*norm);
+-    ellipse = Ellipse(p4,cv::Size(int(delta),int(std::max(2.0,delta*ELLIPSE_WIDTH))),angle);
++    ellipse = Ellipse(p4,cv::Size(int(delta),int(std::max(2.0,static_cast<float>(delta*ELLIPSE_WIDTH)))),angle);
+     return true;
+ }
+ 
+diff --git a/modules/calib3d/src/fisheye.cpp b/modules/calib3d/src/fisheye.cpp
+index 1be7cb44c2..60ea519101 100644
+--- a/modules/calib3d/src/fisheye.cpp
++++ b/modules/calib3d/src/fisheye.cpp
+@@ -394,7 +394,7 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
+         // the current camera model is only valid up to 180 FOV
+         // for larger FOV the loop below does not converge
+         // clip values so we still get plausible results for super fisheye images > 180 grad
+-        theta_d = min(max(-CV_PI/2., theta_d), CV_PI/2.);
++        theta_d = min(max(-CV_PI/2., static_cast<float>(theta_d)), CV_PI/2.);
+ 
+         bool converged = false;
+         double theta = theta_d;
+@@ -594,7 +594,7 @@ void cv::fisheye::estimateNewCameraMatrixForUndistortRectify(InputArray K, Input
+     CV_Assert(D.empty() || ((D.total() == 4) && (D.depth() == CV_32F || D.depth() == CV_64F)));
+ 
+     int w = image_size.width, h = image_size.height;
+-    balance = std::min(std::max(balance, 0.0), 1.0);
++    balance = std::min(std::max(static_cast<float>(balance), 0.0), 1.0);
+ 
+     cv::Mat points(1, 4, CV_64FC2);
+     Vec2d* pptr = points.ptr<Vec2d>();
+diff --git a/modules/calib3d/src/levmarq.cpp b/modules/calib3d/src/levmarq.cpp
+index 623cc202b9..559fbdea9d 100644
+--- a/modules/calib3d/src/levmarq.cpp
++++ b/modules/calib3d/src/levmarq.cpp
+@@ -148,7 +148,7 @@ public:
+                 // find new nu if R too low
+                 double t = d.dot(v);
+                 double nu = (Sd - S)/(fabs(t) > DBL_EPSILON ? t : 1) + 2;
+-                nu = std::min(std::max(nu, 2.), 10.);
++                nu = std::min(std::max(static_cast<float>(nu), 2.), 10.);
+                 if( lambda == 0 )
+                 {
+                     invert(A, Ap, DECOMP_EIG);
+diff --git a/modules/calib3d/src/undistort.dispatch.cpp b/modules/calib3d/src/undistort.dispatch.cpp
+index 6c3d32941c..c9f614404d 100644
+--- a/modules/calib3d/src/undistort.dispatch.cpp
++++ b/modules/calib3d/src/undistort.dispatch.cpp
+@@ -634,8 +634,8 @@ static Point2f mapPointSpherical(const Point2f& p, float alpha, Vec4d* J, enum U
+     {
+         // equirectangular
+         double iR = 1/(alpha + 1);
+-        double x1 = std::max(std::min(x*k*iR, 1.), -1.);
+-        double y1 = std::max(std::min(y*k*iR, 1.), -1.);
++        double x1 = std::max(std::min(static_cast<float>(x*k*iR), 1.), -1.);
++        double y1 = std::max(std::min(static_cast<float>(y*k*iR), 1.), -1.);
+ 
+         if(J)
+         {
 diff --git a/modules/calib3d/src/usac/estimator.cpp b/modules/calib3d/src/usac/estimator.cpp
 index 262d9196a2..45025fb50e 100644
 --- a/modules/calib3d/src/usac/estimator.cpp
@@ -64,6 +127,32 @@ index 262d9196a2..45025fb50e 100644
  namespace cv { namespace usac {
  class HomographyEstimatorImpl : public HomographyEstimator {
  private:
+diff --git a/modules/calib3d/src/usac/fundamental_solver.cpp b/modules/calib3d/src/usac/fundamental_solver.cpp
+index a5e3b30fba..3ec4e9f4ad 100644
+--- a/modules/calib3d/src/usac/fundamental_solver.cpp
++++ b/modules/calib3d/src/usac/fundamental_solver.cpp
+@@ -539,7 +539,7 @@ public:
+             calib_points(calib_points_), K1(K1_), K2(K2_){
+         is_fundamental = is_fundamental_;
+         opt.max_iterations = max_iters_;
+-        opt.loss_scale = Utils::getCalibratedThreshold(std::max(1.5, opt.loss_scale), Mat(K1), Mat(K2));
++        opt.loss_scale = Utils::getCalibratedThreshold(std::max(1.5, static_cast<float>(opt.loss_scale)), Mat(K1), Mat(K2));
+         if (is_fundamental) {
+             K1_inv = K1.inv();
+             K2_t = K2.t();
+diff --git a/modules/calib3d/src/usac/ransac_solvers.cpp b/modules/calib3d/src/usac/ransac_solvers.cpp
+index 494bbc1517..72d6682320 100644
+--- a/modules/calib3d/src/usac/ransac_solvers.cpp
++++ b/modules/calib3d/src/usac/ransac_solvers.cpp
+@@ -311,7 +311,7 @@ public:
+         } else if (params->isFundamental()) {
+             if (K1.empty() || K2.empty()) {
+                 degeneracy = FundamentalDegeneracy::create(state++, quality, points, min_sample_size,
+-                   params->getPlaneAndParallaxIters(), std::max(threshold, 8.) /*sqr homogr thr*/, inner_inlier_thr_sqr, K1, K2);
++                   params->getPlaneAndParallaxIters(), std::max(static_cast<float>(threshold), 8.) /*sqr homogr thr*/, inner_inlier_thr_sqr, K1, K2);
+             } else degeneracy = FundamentalDegeneracyViaE::create(quality, points, calib_points, K1, K2, true/*is F*/);
+             if (min_sample_size == 7) {
+                 min_solver = FundamentalMinimalSolver7pts::create(points, is_ge_solver);
 diff --git a/modules/calib3d/src/usac/utils.cpp b/modules/calib3d/src/usac/utils.cpp
 index 204b31cf92..67b4f71369 100644
 --- a/modules/calib3d/src/usac/utils.cpp
@@ -78,6 +167,51 @@ index 204b31cf92..67b4f71369 100644
  namespace cv { namespace usac {
  /*
  SolvePoly is used to find only real roots of N-degree polynomial using Sturm sequence.
+diff --git a/modules/core/include/opencv2/core/affine.hpp b/modules/core/include/opencv2/core/affine.hpp
+index 1806382e99..0746d403f4 100644
+--- a/modules/core/include/opencv2/core/affine.hpp
++++ b/modules/core/include/opencv2/core/affine.hpp
+@@ -509,11 +509,11 @@ typename cv::Affine3<T>::Vec3 cv::Affine3<T>::rvec() const
+         {
+             double t;
+             t = (R.val[0] + 1) * 0.5;
+-            rx = std::sqrt(std::max(t, 0.0));
++            rx = std::sqrt(std::max(static_cast<float>(t), 0.0));
+             t = (R.val[4] + 1) * 0.5;
+-            ry = std::sqrt(std::max(t, 0.0)) * (R.val[1] < 0 ? -1.0 : 1.0);
++            ry = std::sqrt(std::max(static_cast<float>(t), 0.0)) * (R.val[1] < 0 ? -1.0 : 1.0);
+             t = (R.val[8] + 1) * 0.5;
+-            rz = std::sqrt(std::max(t, 0.0)) * (R.val[2] < 0 ? -1.0 : 1.0);
++            rz = std::sqrt(std::max(static_cast<float>(t), 0.0)) * (R.val[2] < 0 ? -1.0 : 1.0);
+ 
+             if( fabs(rx) < fabs(ry) && fabs(rx) < fabs(rz) && (R.val[5] > 0) != (ry*rz > 0) )
+                 rz = -rz;
+diff --git a/modules/core/src/kmeans.cpp b/modules/core/src/kmeans.cpp
+index f5a5bc5c6c..10a3e9b5f1 100644
+--- a/modules/core/src/kmeans.cpp
++++ b/modules/core/src/kmeans.cpp
+@@ -279,7 +279,7 @@ double cv::kmeans( InputArray _data, int K,
+     RNG& rng = theRNG();
+ 
+     if (criteria.type & TermCriteria::EPS)
+-        criteria.epsilon = std::max(criteria.epsilon, 0.);
++        criteria.epsilon = std::max(static_cast<float>(criteria.epsilon), 0.);
+     else
+         criteria.epsilon = FLT_EPSILON;
+     criteria.epsilon *= criteria.epsilon;
+diff --git a/modules/core/src/mean.dispatch.cpp b/modules/core/src/mean.dispatch.cpp
+index 0f94e5421a..ceebd98007 100644
+--- a/modules/core/src/mean.dispatch.cpp
++++ b/modules/core/src/mean.dispatch.cpp
+@@ -597,7 +597,7 @@ void meanStdDev(InputArray _src, OutputArray _mean, OutputArray _sdv, InputArray
+     for( k = 0; k < cn; k++ )
+     {
+         s[k] *= scale;
+-        sq[k] = std::sqrt(std::max(sq[k]*scale - s[k]*s[k], 0.));
++        sq[k] = std::sqrt(std::max(static_cast<float>(sq[k]*scale - s[k]*s[k]), 0.));
+     }
+ 
+     for( j = 0; j < 2; j++ )
 diff --git a/modules/core/src/parallel.cpp b/modules/core/src/parallel.cpp
 index 4525928b94..e0cc9246bb 100644
 --- a/modules/core/src/parallel.cpp
@@ -91,6 +225,136 @@ index 4525928b94..e0cc9246bb 100644
      {
          try
          {
+diff --git a/modules/features2d/src/evaluation.cpp b/modules/features2d/src/evaluation.cpp
+index 7135891e0d..8076b824d3 100644
+--- a/modules/features2d/src/evaluation.cpp
++++ b/modules/features2d/src/evaluation.cpp
+@@ -141,10 +141,10 @@ EllipticKeyPoint::EllipticKeyPoint( const Point2f& _center, const Scalar& _ellip
+     center = _center;
+     ellipse = _ellipse;
+ 
+-    double a = ellipse[0], b = ellipse[1], c = ellipse[2];
+-    double ac_b2 = a*c - b*b;
+-    double x1, x2;
+-    solveQuadratic(1., -(a+c), ac_b2, x1, x2);
++    float a = ellipse[0], b = ellipse[1], c = ellipse[2];
++    float ac_b2 = a*c - b*b;
++    float x1, x2;
++    solveQuadratic((1.0), -(a+c), ac_b2, x1, x2);
+     axes.width = (float)(1/sqrt(x1));
+     axes.height = (float)(1/sqrt(x2));
+ 
+diff --git a/modules/imgproc/src/canny.cpp b/modules/imgproc/src/canny.cpp
+index 2fed0ba0c2..6963b092e3 100644
+--- a/modules/imgproc/src/canny.cpp
++++ b/modules/imgproc/src/canny.cpp
+@@ -883,8 +883,8 @@ void Canny( InputArray _src, OutputArray _dst,
+ 
+     if (L2gradient)
+     {
+-        low_thresh = std::min(32767.0, low_thresh);
+-        high_thresh = std::min(32767.0, high_thresh);
++        low_thresh = std::min(32767.0, static_cast<float>(low_thresh));
++        high_thresh = std::min(32767.0, static_cast<float>(high_thresh));
+ 
+         if (low_thresh > 0) low_thresh *= low_thresh;
+         if (high_thresh > 0) high_thresh *= high_thresh;
+@@ -959,8 +959,8 @@ void Canny( InputArray _dx, InputArray _dy, OutputArray _dst,
+ 
+     if (L2gradient)
+     {
+-        low_thresh = std::min(32767.0, low_thresh);
+-        high_thresh = std::min(32767.0, high_thresh);
++        low_thresh = std::min(32767.0, static_cast<float>(low_thresh));
++        high_thresh = std::min(32767.0, static_cast<float>(high_thresh));
+ 
+         if (low_thresh > 0) low_thresh *= low_thresh;
+         if (high_thresh > 0) high_thresh *= high_thresh;
+diff --git a/modules/imgproc/src/histogram.cpp b/modules/imgproc/src/histogram.cpp
+index 7a52d0f3fe..f447a08700 100644
+--- a/modules/imgproc/src/histogram.cpp
++++ b/modules/imgproc/src/histogram.cpp
+@@ -2228,7 +2228,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
+     {
+         s1 *= s2;
+         s1 = fabs(s1) > FLT_EPSILON ? 1./std::sqrt(s1) : 1.;
+-        result = std::sqrt(std::max(1. - result*s1, 0.));
++        result = std::sqrt(std::max(static_cast<float>(1. - result*s1), 0.));
+     }
+ 
+     return result;
+@@ -2334,7 +2334,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
+ 
+         s1 *= s2;
+         s1 = fabs(s1) > FLT_EPSILON ? 1./std::sqrt(s1) : 1.;
+-        result = std::sqrt(std::max(1. - result*s1, 0.));
++        result = std::sqrt(std::max(static_cast<float>(1. - result*s1), 0.));
+     }
+     else if( method == CV_COMP_KL_DIV )
+     {
+diff --git a/modules/imgproc/src/hough.cpp b/modules/imgproc/src/hough.cpp
+index 9961e9aace..7a6b6f574c 100644
+--- a/modules/imgproc/src/hough.cpp
++++ b/modules/imgproc/src/hough.cpp
+@@ -1783,12 +1783,12 @@ static void HoughCirclesAlt( const Mat& img, std::vector<EstimatedCircle>& circl
+         maxRadius = std::min(img.cols, img.rows)*0.5;
+     if( minRadius > maxRadius )
+         std::swap(minRadius, maxRadius);
+-    maxRadius = std::min(maxRadius, std::min(img.cols, img.rows)*0.5);
+-    maxRadius = std::max(maxRadius, 1.);
+-    minRadius = std::max(minRadius, 1.);
++    maxRadius = std::min(static_cast<float>(maxRadius), std::min(img.cols, img.rows)*0.5);
++    maxRadius = std::max(static_cast<float>(maxRadius), 1.);
++    minRadius = std::max(static_cast<float>(minRadius), 1.);
+     minRadius = std::min(minRadius, maxRadius);
+-    cannyThreshold = std::max(cannyThreshold, 1.);
+-    dp = std::max(dp, 1.);
++    cannyThreshold = std::max(static_cast<float>(cannyThreshold), 1.);
++    dp = std::max(static_cast<float>(dp), 1.);
+ 
+     Mat Dx, Dy, edges;
+     Scharr(img, Dx, CV_16S, 1, 0);
+diff --git a/modules/imgproc/src/resize.cpp b/modules/imgproc/src/resize.cpp
+index 0943e97ead..7aaf0b12f6 100644
+--- a/modules/imgproc/src/resize.cpp
++++ b/modules/imgproc/src/resize.cpp
+@@ -3310,7 +3310,7 @@ static int computeResizeAreaTab( int ssize, int dsize, int cn, double scale, Dec
+             CV_Assert( k < ssize*2 );
+             tab[k].di = dx * cn;
+             tab[k].si = sx2 * cn;
+-            tab[k++].alpha = (float)(std::min(std::min(fsx2 - sx2, 1.), cellWidth) / cellWidth);
++            tab[k++].alpha = (float)(std::min(std::min(static_cast<float>(fsx2) - sx2, 1.), static_cast<float>(cellWidth)) / cellWidth);
+         }
+     }
+     return k;
+diff --git a/modules/imgproc/src/smooth.dispatch.cpp b/modules/imgproc/src/smooth.dispatch.cpp
+index 8a521d6df3..8af8a26826 100644
+--- a/modules/imgproc/src/smooth.dispatch.cpp
++++ b/modules/imgproc/src/smooth.dispatch.cpp
+@@ -293,8 +293,8 @@ static void createGaussianKernels( T & kx, T & ky, int type, Size &ksize,
+     CV_Assert( ksize.width  > 0 && ksize.width  % 2 == 1 &&
+                ksize.height > 0 && ksize.height % 2 == 1 );
+ 
+-    sigma1 = std::max( sigma1, 0. );
+-    sigma2 = std::max( sigma2, 0. );
++    sigma1 = std::max( static_cast<float>(sigma1), 0. );
++    sigma2 = std::max( static_cast<float>(sigma2), 0. );
+ 
+     getGaussianKernel( ksize.width, sigma1, std::max(depth, CV_32F), kx );
+     if( ksize.height == ksize.width && std::abs(sigma1 - sigma2) < DBL_EPSILON )
+diff --git a/modules/imgproc/src/templmatch.cpp b/modules/imgproc/src/templmatch.cpp
+index 67845e7429..99e1372f33 100644
+--- a/modules/imgproc/src/templmatch.cpp
++++ b/modules/imgproc/src/templmatch.cpp
+@@ -1010,7 +1010,7 @@ static void common_matchTemplate( Mat& img, Mat& templ, Mat& result, int method,
+             if( isNormed )
+             {
+                 double diff2 = MAX(wndSum2 - wndMean2, 0);
+-                if (diff2 <= std::min(0.5, 10 * FLT_EPSILON * wndSum2))
++                if (diff2 <= std::min(0.5, static_cast<float>(10 * FLT_EPSILON * wndSum2)))
+                     t = 0; // avoid rounding errors
+                 else
+                     t = std::sqrt(diff2)*templNorm;
 diff --git a/modules/objdetect/src/cascadedetect.cpp b/modules/objdetect/src/cascadedetect.cpp
 index 97b9d70fef..3ac84c179c 100644
 --- a/modules/objdetect/src/cascadedetect.cpp

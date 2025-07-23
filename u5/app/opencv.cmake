@@ -40,5 +40,3 @@ target_link_libraries(app PRIVATE
 target_sources(app PRIVATE
     src/opencv_sample.cpp
 )
-
-set(OPJ_LIB_PATH ${CMAKE_CURRENT_LIST_DIR}/../lib/opj)

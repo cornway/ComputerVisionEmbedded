@@ -134,7 +134,9 @@ int main(void)
 	const struct device *display_dev;
 	lv_obj_t *count_label;
 
+#if defined(CONFIG_OPENCV_LIB)
 	opencv_test();
+#endif
 
 	fs_example();
 
@@ -254,6 +256,7 @@ int main(void)
 
 		if (count == 0 && prev_count != 0)
 		{
+#if defined(CONFIG_OPENCV_LIB)
 			//int faces = object_detect("/NAND:/face.png", "/NAND:/alt.xml");
 
 			uint8_t *out_buf;
@@ -278,6 +281,7 @@ int main(void)
 			lv_obj_t* img = lv_img_create(lv_screen_active());
 			lv_img_set_src(img, &img_dsc);
 			lv_obj_center(img);
+#endif
 		}
 
 		prev_count = count;

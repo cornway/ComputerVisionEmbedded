@@ -1,0 +1,48 @@
+# Copyright (c) 2025 Grinreflex
+
+menu "Nema Gfx"
+
+config NEMA
+	bool "NEMA gfx device drivers"
+    default n
+
+    depends on FPU
+    depends on FP_SOFTABI
+
+	help
+	  This option enables NEMA gfx Driver (stm32 gpu2d).
+
+config NEMA_LOG_LEVEL
+    int "NEMA_LOG_LEVEL"
+    default 3
+
+config LV_USE_NEMA_GFX
+    bool "Use LV_NEMA_GFX on the supporting STM32 platforms"
+    default y
+    depends on NEMA
+    select USE_STM32_HAL_GPU2D
+    select USE_STM32_HAL_CORTEX
+    help
+        LV_USE_NEMA_GFX.
+
+config LV_USE_NEMA_HAL
+    int "Use LV_NEMA_HAL on the supporting STM32 platforms"
+    depends on NEMA
+    default 1
+    help
+        LV_USE_NEMA_HAL.
+
+endmenu
+
+if NEMA
+
+config NEMA_INIT_PRIORITY
+	int "NEMA device drivers init priority"
+	default KERNEL_INIT_PRIORITY_DEVICE
+	help
+	  NEMA device drivers init priority.
+
+module = NEMA
+module-str = nema
+
+endif # NEMA
