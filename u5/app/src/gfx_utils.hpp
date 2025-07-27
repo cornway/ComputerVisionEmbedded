@@ -4,6 +4,8 @@
 #include "stddef.h"
 #include "stdint.h"
 
+#include <lvgl.h>
+
 namespace Gfx {
 
 struct GfxBuffer {
@@ -17,6 +19,6 @@ struct GfxBuffer {
  * @brief Fit source buffer onto destination
  *
  */
-void fit(const GfxBuffer &src, const GfxBuffer &dst);
+void fit(lv_obj_t *canvas, const GfxBuffer &src, const GfxBuffer &dst);
 
 } // namespace Gfx

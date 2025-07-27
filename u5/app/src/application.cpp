@@ -4,15 +4,30 @@
 #include "lvgl.h"
 
 #include "gfx_utils.hpp"
+#if defined(CONFIG_OPENCV_LIB)
 #include "opencv_utils.hpp"
+#endif
+
+#include "uart.hpp"
 
 #include "application.h"
 
 #define NAND_PATH(_path) ("/NAND:" _path)
 
+#if defined(CONFIG_OPENCV_LIB)
 static cv::CascadeClassifier faceCascade;
+#endif
+
+#define UART_RING_BUF_SIZE 8192
+static uint8_t uart_ring_buf[UART_RING_BUF_SIZE];
+
+static lv_obj_t *canvas;
+
+UartEx uartEx = UartEx(uart_ring_buf, sizeof(uart_ring_buf));
 
 int init() {
+
+#if defined(CONFIG_OPENCV_LIB)
   const char *faceCascadePath = NAND_PATH("/alt.xml");
 
   cv::setNumThreads(1);
@@ -28,17 +43,26 @@ int init() {
   uint32_t elapsed = end_ms - start_ms;
 
   std::cout << "faceCascade.load : " << elapsed << std::endl;
+#endif
+
+  canvas = lv_canvas_create(lv_screen_active());
+  lv_canvas_fill_bg(canvas, lv_color_hex3(0xccc), LV_OPA_COVER);
+  lv_obj_center(canvas);
+
+  uartEx.init();
+  uartEx.trigger();
 
   return 0;
 }
 
-#define TMP_BUF_WIDTH 320
-#define TMP_BUF_HEIGHT 240
+#define TMP_BUF_WIDTH 400
+#define TMP_BUF_HEIGHT 400
 
 static uint8_t tmp_buf[TMP_BUF_WIDTH * TMP_BUF_HEIGHT];
 
 int loop() {
 
+#if 0 // defined(CONFIG_OPENCV_LIB)
   const char *imagePath = NAND_PATH("/face.png");
 
   uint32_t start_ms = k_uptime_get_32();
@@ -83,6 +107,66 @@ int loop() {
   dst.cf = LV_COLOR_FORMAT_A8;
 
   Gfx::fit(src, dst);
+#endif
+
+  uint32_t jpeg_buf_len = uartEx.tryReadHeader();
+
+  if (0 == jpeg_buf_len) {
+    return 0;
+  }
+
+  uartEx.tryRead(tmp_buf, jpeg_buf_len);
+  uartEx.trigger();
+
+  static cv::Mat in(1, jpeg_buf_len, CV_8UC1, tmp_buf);
+  cv::Mat gray = cv::imdecode(in, cv::IMREAD_GRAYSCALE);
+  if (gray.empty()) {
+    printk("JPEG decode failed\n");
+    return -1;
+  }
+
+  // cv::equalizeHist(gray, gray);
+
+  const cv::Size minSize(20, 20);
+  const cv::Size maxSize(gray.cols, gray.rows);
+  const double scaleFactor = 1.3;
+  const int minNeighbors = 3;
+  const int flags = 0;
+
+  std::vector<cv::Rect> faces;
+
+  uint32_t start_ms = k_uptime_get_32();
+
+  faceCascade.detectMultiScale(gray, faces, scaleFactor, minNeighbors, flags,
+                               minSize, maxSize);
+
+  uint32_t end_ms = k_uptime_get_32();
+  uint32_t elapsed = end_ms - start_ms;
+
+  for (const auto &r : faces) {
+    cv::rectangle(gray, r, cv::Scalar(255, 255, 255), 2, cv::LINE_8);
+    std::cout << "detectMultiScale : " << elapsed << std::endl;
+    printf("faces = %d, %d %d\n", faces.size(), gray.cols, gray.rows);
+  }
+
+  static Gfx::GfxBuffer src;
+  static Gfx::GfxBuffer dst;
+
+  src.buf = gray.data;
+  src.width = gray.cols;
+  src.height = gray.rows;
+  src.stride = gray.cols;
+  src.cf = LV_COLOR_FORMAT_L8;
+  src.size = gray.rows * gray.cols;
+
+  dst.buf = tmp_buf;
+  dst.width = TMP_BUF_WIDTH;
+  dst.height = TMP_BUF_HEIGHT;
+  dst.stride = TMP_BUF_WIDTH;
+  dst.size = sizeof(tmp_buf);
+  dst.cf = LV_COLOR_FORMAT_L8;
+
+  Gfx::fit(canvas, src, dst);
 
   return 0;
 }

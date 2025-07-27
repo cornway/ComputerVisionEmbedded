@@ -115,21 +115,26 @@ int main(void) {
   lv_timer_handler();
   display_blanking_off(display_dev);
 
-  init();
+  if (init()) {
+    return -1;
+  }
 
   uint32_t prev_count = count;
   while (1) {
-    sprintf(count_str, "%d", count);
-    lv_label_set_text(count_label, count_str);
+    // sprintf(count_str, "%d", count);
+    // lv_label_set_text(count_label, count_str);
     lv_timer_handler();
 
+#if 0
     if (count == 0 && prev_count != 0) {
       loop();
     }
+#endif
+    loop();
 
     prev_count = count;
 
     ++count;
-    k_sleep(K_MSEC(100));
+    k_sleep(K_MSEC(1));
   }
 }

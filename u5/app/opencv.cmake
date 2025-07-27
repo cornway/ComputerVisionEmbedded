@@ -39,4 +39,5 @@ target_link_libraries(app PRIVATE
 
 target_sources(app PRIVATE
     src/opencv_sample.cpp
+    src/opencv_utils.cpp
 )

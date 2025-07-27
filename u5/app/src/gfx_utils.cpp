@@ -1,12 +1,9 @@
 
-
-#include <lvgl.h>
-
 #include "gfx_utils.hpp"
 
 namespace Gfx {
 
-void fit(const GfxBuffer &src, const GfxBuffer &dst) {
+void fit(lv_obj_t *canvas, const GfxBuffer &src, const GfxBuffer &dst) {
 
   lv_image_dsc_t src_img = {
       .header =
@@ -22,12 +19,8 @@ void fit(const GfxBuffer &src, const GfxBuffer &dst) {
   };
 
   // TODO: don't use screen ?
-  lv_obj_t *canvas = lv_canvas_create(lv_screen_active());
-
   lv_canvas_set_buffer(canvas, dst.buf, dst.width, dst.height,
                        static_cast<lv_color_format_t>(dst.cf));
-  // lv_canvas_fill_bg(canvas, lv_color_hex3(0xccc), LV_OPA_COVER);
-  lv_obj_center(canvas);
 
   lv_layer_t layer;
   lv_canvas_init_layer(canvas, &layer);
