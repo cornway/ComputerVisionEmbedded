@@ -5,24 +5,9 @@
 #include <zephyr/device.h>
 #include <zephyr/toolchain.h>
 
-typedef enum {
-  JpegColorSpaceGray = 0,
-  JpegColorSpaceYCBCR = 1,
-  JpegColorSpaceCMYK = 2,
-  JpegColorSpaceUnknown = 3,
-} JpegColorSpace_E;
-
-typedef enum {
-  // 0-> 4:4:4 , 1-> 4:2:2, 2 -> 4:1:1, 3 -> 4:2:0
-  JpegChromaSS_444 = 0,
-  JpegChromaSS_422 = 1,
-  JpegChromaSS_411 = 2,
-  JpegChromaSS_420 = 3,
-} JpegChromaSubSampling_E;
-
 struct jpeg_out_prop {
-  JpegColorSpace_E color_space;
-  JpegChromaSubSampling_E chroma;
+  uint32_t color_space;
+  uint32_t chroma;
   uint32_t width;
   uint32_t height;
   uint32_t quality;

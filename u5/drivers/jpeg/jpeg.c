@@ -56,16 +56,14 @@ void HAL_JPEG_InfoReadyCallback(JPEG_HandleTypeDef *hjpeg,
 
   struct jpeg_hw_data *data = CONTAINER_OF(hjpeg, struct jpeg_hw_data, hjpeg);
 
-  data->out_prop.color_space =
-      pInfo->ColorSpace == JPEG_GRAYSCALE_COLORSPACE ? JpegColorSpaceGray
-      : pInfo->ColorSpace == JPEG_YCBCR_COLORSPACE   ? JpegColorSpaceYCBCR
-      : pInfo->ColorSpace == JPEG_CMYK_COLORSPACE    ? JpegColorSpaceCMYK
-                                                     : JpegColorSpaceUnknown;
-
-  data->out_prop.chroma = (JpegChromaSubSampling_E)pInfo->ChromaSubsampling;
+  data->out_prop.color_space = pInfo->ColorSpace;
+  data->out_prop.chroma = pInfo->ChromaSubsampling;
   data->out_prop.width = pInfo->ImageHeight;
   data->out_prop.height = pInfo->ImageWidth;
   data->out_prop.quality = pInfo->ImageQuality;
+
+  LOG_INF("ColorSpace = %u, ChromaSubsampling = %u", pInfo->ColorSpace,
+          pInfo->ChromaSubsampling);
 
   // LOG_INF("HAL_JPEG_InfoReadyCallback");
 }
@@ -244,6 +242,8 @@ static int jpeg_hw_init(const struct device *dev) {
 
   LOG_INF("STM32 JPEG HW OK\n");
 
+  JPEG_InitColorTables();
+
   return 0;
 }
 
@@ -319,14 +319,12 @@ static inline uint32_t _jpeg_get_in_size(JPEG_ConfTypeDef *pInfo,
   case JPEG_YCBCR_COLORSPACE: {
 
     switch (pInfo->ChromaSubsampling) {
-    case 0: // 4:4:4
+    case JPEG_444_SUBSAMPLING:
       return NrMCUs * YCBCR_444_BLOCK_SIZE;
-    case 1: // 4:2:2
+    case JPEG_420_SUBSAMPLING:
+      return NrMCUs * YCBCR_420_BLOCK_SIZE;
+    case JPEG_422_SUBSAMPLING:
       return NrMCUs * YCBCR_422_BLOCK_SIZE;
-    case 2: // 4:1:1
-      return NrMCUs * YCBCR_420_BLOCK_SIZE;
-    case 3: // 4:2:0
-      return NrMCUs * YCBCR_420_BLOCK_SIZE;
     default: {
       LOG_ERR("Unknown ChromaSubsampling");
       return 0;
@@ -347,18 +345,14 @@ static int _jpeg_color_convert_helper(const struct device *dev,
 
   JPEG_ConfTypeDef pInfo;
 
-  pInfo.ColorSpace = prop->color_space == JpegColorSpaceGray
-                         ? (uint32_t)JPEG_GRAYSCALE_COLORSPACE
-                     : prop->color_space == JpegColorSpaceYCBCR
-                         ? (uint32_t)JPEG_YCBCR_COLORSPACE
-                     : prop->color_space == JpegColorSpaceCMYK
-                         ? (uint32_t)JPEG_CMYK_COLORSPACE
-                         : (uint32_t)-1;
-
-  pInfo.ChromaSubsampling = (uint32_t)prop->chroma;
+  pInfo.ColorSpace = prop->color_space;
+  pInfo.ChromaSubsampling = prop->chroma;
   pInfo.ImageHeight = prop->width;
   pInfo.ImageWidth = prop->height;
   pInfo.ImageQuality = prop->quality;
+
+  LOG_INF("ColorSpace = %u, ChromaSubsampling = %u", pInfo.ColorSpace,
+          pInfo.ChromaSubsampling);
 
   JPEG_YCbCrToRGB_Convert_Function convert_function;
   uint32_t ImageNbMCUs = 0;
@@ -380,7 +374,7 @@ static int _jpeg_color_convert_helper(const struct device *dev,
   }
 
   uint32_t NrBlocks =
-      convert_function(src, dst, 0, ImageNbMCUs * 256, &ConvertedDataCount);
+      convert_function(src, dst, 0, inSize, &ConvertedDataCount);
 
   LOG_INF("Decoded image : NrBlocks = %d, size = %d", NrBlocks,
           ConvertedDataCount);

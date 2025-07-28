@@ -119,7 +119,11 @@ int main(void) {
     return -1;
   }
 
-  uint32_t prev_count = count;
+  uint32_t fps_stop = 0;
+  uint32_t frames = 0;
+
+  fps_stop = k_uptime_get_32() + 1000;
+
   while (1) {
     // sprintf(count_str, "%d", count);
     // lv_label_set_text(count_label, count_str);
@@ -132,9 +136,15 @@ int main(void) {
 #endif
     loop();
 
-    prev_count = count;
-
-    ++count;
     k_sleep(K_MSEC(1));
+
+    frames++;
+    if (k_uptime_get_32() > fps_stop) {
+      int fps = (frames * 1000) / (1000 + k_uptime_get_32() - fps_stop);
+      sprintf(count_str, "FPS: %d", fps);
+      lv_label_set_text(count_label, count_str);
+      fps_stop = k_uptime_get_32() + 1000;
+      frames = 0;
+    }
   }
 }

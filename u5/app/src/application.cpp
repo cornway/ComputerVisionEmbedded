@@ -70,118 +70,9 @@ int init() {
 #define TMP_BUF_WIDTH 400
 #define TMP_BUF_HEIGHT 400
 
-// static uint8_t tmp_buf[TMP_BUF_WIDTH * TMP_BUF_HEIGHT];
+static uint8_t tmp_buf[TMP_BUF_WIDTH * TMP_BUF_HEIGHT];
 
 int loop() {
-
-#if 0 // defined(CONFIG_OPENCV_LIB)
-  const char *imagePath = NAND_PATH("/face.png");
-
-  uint32_t start_ms = k_uptime_get_32();
-
-  cv::Mat gray = Ocv::objdetect_prepare(imagePath, cv::IMREAD_COLOR);
-
-  const cv::Size minSize(20, 20);
-  const cv::Size maxSize(gray.cols, gray.rows);
-  const double scaleFactor = 1.3;
-  const int minNeighbors = 3;
-  const int flags = 0;
-
-  std::vector<cv::Rect> faces;
-
-  faceCascade.detectMultiScale(gray, faces, scaleFactor, minNeighbors, flags,
-                               minSize, maxSize);
-
-  uint32_t end_ms = k_uptime_get_32();
-  uint32_t elapsed = end_ms - start_ms;
-
-  std::cout << "detectMultiScale : " << elapsed << std::endl;
-
-  for (const auto &r : faces) {
-    cv::rectangle(gray, r, cv::Scalar(255, 255, 255), 2, cv::LINE_8);
-  }
-
-  Gfx::GfxBuffer src;
-  Gfx::GfxBuffer dst;
-
-  src.buf = gray.data;
-  src.width = gray.cols;
-  src.height = gray.rows;
-  src.stride = gray.cols;
-  src.cf = LV_COLOR_FORMAT_A8;
-  src.size = gray.rows * gray.cols;
-
-  dst.buf = tmp_buf;
-  dst.width = TMP_BUF_WIDTH;
-  dst.height = TMP_BUF_HEIGHT;
-  dst.stride = TMP_BUF_WIDTH;
-  dst.size = sizeof(tmp_buf);
-  dst.cf = LV_COLOR_FORMAT_A8;
-
-  Gfx::fit(src, dst);
-#endif
-
-#if defined(CONFIG_OPENCV_LIB)
-  uint32_t jpeg_buf_len = uartEx.tryReadHeader();
-
-  if (0 == jpeg_buf_len) {
-    return 0;
-  }
-
-  uartEx.tryRead(tmp_buf, jpeg_buf_len);
-  uartEx.trigger();
-
-  static cv::Mat in(1, jpeg_buf_len, CV_8UC1, tmp_buf);
-  cv::Mat gray = cv::imdecode(in, cv::IMREAD_GRAYSCALE);
-  if (gray.empty()) {
-    printk("JPEG decode failed\n");
-    return -1;
-  }
-
-  // cv::equalizeHist(gray, gray);
-
-  const cv::Size minSize(20, 20);
-  const cv::Size maxSize(gray.cols, gray.rows);
-  const double scaleFactor = 1.3;
-  const int minNeighbors = 3;
-  const int flags = 0;
-
-  std::vector<cv::Rect> faces;
-
-  uint32_t start_ms = k_uptime_get_32();
-
-  faceCascade.detectMultiScale(gray, faces, scaleFactor, minNeighbors, flags,
-                               minSize, maxSize);
-
-  uint32_t end_ms = k_uptime_get_32();
-  uint32_t elapsed = end_ms - start_ms;
-
-  for (const auto &r : faces) {
-    cv::rectangle(gray, r, cv::Scalar(255, 255, 255), 2, cv::LINE_8);
-    std::cout << "detectMultiScale : " << elapsed << std::endl;
-    printf("faces = %d, %d %d\n", faces.size(), gray.cols, gray.rows);
-  }
-
-  static Gfx::GfxBuffer src;
-  static Gfx::GfxBuffer dst;
-
-  src.buf = gray.data;
-  src.width = gray.cols;
-  src.height = gray.rows;
-  src.stride = gray.cols;
-  src.cf = LV_COLOR_FORMAT_L8;
-  src.size = gray.rows * gray.cols;
-
-  dst.buf = tmp_buf;
-  dst.width = TMP_BUF_WIDTH;
-  dst.height = TMP_BUF_HEIGHT;
-  dst.stride = TMP_BUF_WIDTH;
-  dst.size = sizeof(tmp_buf);
-  dst.cf = LV_COLOR_FORMAT_L8;
-
-  Gfx::fit(canvas, src, dst);
-#endif
-
   uint32_t jpeg_buf_len = uartEx.tryReadHeader();
 
   if (0 == jpeg_buf_len) {
@@ -191,7 +82,7 @@ int loop() {
   // memset(tmp_buf, 0, sizeof(tmp_buf));
 
   static uint8_t uart_buf[8192];
-  static uint8_t yuyv_buf[8192 * 2];
+  static uint8_t yuyv_buf[80 * 80 * 3];
   static uint8_t rgb_buf[80 * 80 * 3];
   struct jpeg_out_prop jpeg_prop;
 
@@ -210,15 +101,56 @@ int loop() {
 
   jpeg_color_convert_helper(jpeg_dev, &jpeg_prop, yuyv_buf, rgb_buf);
 
-  static lv_img_dsc_t img_dsc;
-  img_dsc.header.w = jpeg_prop.width;
-  img_dsc.header.h = jpeg_prop.height;
-  img_dsc.header.cf = LV_COLOR_FORMAT_RGB888;
-  img_dsc.data_size = jpeg_prop.height * jpeg_prop.width * 3;
-  img_dsc.data = rgb_buf;
+  // memset(rgb_buf, 0xff, sizeof(rgb_buf));
+  uint32_t rgb_size = 80 * 80 * 3;
 
-  lv_img_set_src(jpeg_img, &img_dsc);
-  lv_obj_center(jpeg_img);
+  cv::Mat mat_rgb(jpeg_prop.height, jpeg_prop.width, CV_8UC3, rgb_buf);
+  cv::Mat mat_gray;
+
+  cv::cvtColor(mat_rgb, mat_gray, cv::COLOR_RGB2GRAY);
+
+  const cv::Size minSize(20, 20);
+  const cv::Size maxSize(mat_gray.cols, mat_gray.rows);
+  const double scaleFactor = 1.3;
+  const int minNeighbors = 3;
+  const int flags = 0;
+
+  std::vector<cv::Rect> faces;
+
+  uint32_t start_ms = k_uptime_get_32();
+
+  faceCascade.detectMultiScale(mat_gray, faces, scaleFactor, minNeighbors,
+                               flags, minSize, maxSize);
+
+  uint32_t end_ms = k_uptime_get_32();
+  uint32_t elapsed = end_ms - start_ms;
+
+  printf("detectMultiScale : %d ms\n", elapsed);
+
+  for (const auto &r : faces) {
+    cv::rectangle(mat_gray, r, cv::Scalar(255, 255, 255), 2, cv::LINE_8);
+    std::cout << "detectMultiScale : " << elapsed << std::endl;
+    printf("faces = %d, %d %d\n", faces.size(), mat_gray.cols, mat_gray.rows);
+  }
+
+  static Gfx::GfxBuffer src;
+  static Gfx::GfxBuffer dst;
+
+  src.buf = mat_gray.data;
+  src.width = mat_gray.cols;
+  src.height = mat_gray.rows;
+  src.stride = mat_gray.cols;
+  src.cf = LV_COLOR_FORMAT_L8;
+  src.size = mat_gray.rows * mat_gray.cols;
+
+  dst.buf = tmp_buf;
+  dst.width = TMP_BUF_WIDTH;
+  dst.height = TMP_BUF_HEIGHT;
+  dst.stride = TMP_BUF_WIDTH;
+  dst.size = sizeof(tmp_buf);
+  dst.cf = LV_COLOR_FORMAT_L8;
+
+  Gfx::fit(canvas, src, dst);
 
   return 0;
 }

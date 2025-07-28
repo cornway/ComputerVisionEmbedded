@@ -2497,6 +2497,7 @@ JPEG_GetDecodeColorConvertFunc(JPEG_ConfTypeDef *pJpegInfo,
       pJpegInfo->ImageWidth * pJpegInfo->ImageHeight * JPEG_BYTES_PER_PIXEL;
 
   JPEG_ConvertorParams.ChromaSubsampling = pJpegInfo->ChromaSubsampling;
+
   if (JPEG_ConvertorParams.ColorSpace == JPEG_YCBCR_COLORSPACE) {
     if (JPEG_ConvertorParams.ChromaSubsampling == JPEG_420_SUBSAMPLING) {
       *pFunction = JPEG_MCU_YCbCr420_ARGB_ConvertBlocks;
