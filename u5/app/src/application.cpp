@@ -13,17 +13,6 @@
 
 #include "application.h"
 
-static inline uint8_t clamp_u8(int v) {
-  if (v < 0)
-    return 0;
-  if (v > 255)
-    return 255;
-  return (uint8_t)v;
-}
-
-void yuyv_to_rgb888(const uint8_t *yuyv_buf, uint8_t *rgb_buf, int width,
-                    int height);
-
 #define JPEG_DEVICE_NODE DT_CHOSEN(zephyr_jpeg)
 
 #define NAND_PATH(_path) ("/NAND:" _path)
@@ -204,6 +193,7 @@ int loop() {
   static uint8_t uart_buf[8192];
   static uint8_t yuyv_buf[8192 * 2];
   static uint8_t rgb_buf[80 * 80 * 3];
+  struct jpeg_out_prop jpeg_prop;
 
   jpeg_buf_len = uartEx.tryRead(uart_buf, jpeg_buf_len);
 
@@ -213,19 +203,12 @@ int loop() {
 
   jpeg_hw_decode(jpeg_dev, uart_buf, jpeg_buf_len, yuyv_buf);
 
-  jpeg_hw_poll(jpeg_dev, 0);
-
-  struct jpeg_out_prop jpeg_prop;
-
-  jpeg_hw_get_prop(jpeg_dev, &jpeg_prop);
+  jpeg_hw_poll(jpeg_dev, 0, &jpeg_prop);
 
   printf("JPEG done w = %d, h = %d, color = %d chroma = %d\n", jpeg_prop.width,
          jpeg_prop.height, jpeg_prop.color_space, jpeg_prop.chroma);
 
-  int img_size = jpeg_prop.height * jpeg_prop.width * 4;
-
-  jpeg_hw_to_rgb888(jpeg_dev, yuyv_buf, jpeg_prop.height * jpeg_prop.width * 2,
-                    rgb_buf);
+  jpeg_color_convert_helper(jpeg_dev, &jpeg_prop, yuyv_buf, rgb_buf);
 
   static lv_img_dsc_t img_dsc;
   img_dsc.header.w = jpeg_prop.width;

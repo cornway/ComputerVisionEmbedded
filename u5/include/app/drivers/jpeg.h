@@ -31,11 +31,10 @@ struct jpeg_out_prop {
 __subsystem struct jpeg_hw_driver_api {
   int (*decode)(const struct device *dev, const uint8_t *src, size_t src_size,
                 uint8_t *dst);
-  int (*poll)(const struct device *dev, uint32_t timeout_ms);
-
-  int (*get_prop)(const struct device *dev, struct jpeg_out_prop *prop);
-  int (*to_rgb888)(const struct device *dev, const uint8_t *src,
-                   size_t src_size, uint8_t *dst);
+  int (*poll)(const struct device *dev, uint32_t timeout_ms,
+              struct jpeg_out_prop *prop);
+  int (*cc_helper)(const struct device *dev, struct jpeg_out_prop *prop,
+                   const uint8_t *src, uint8_t *dst);
 };
 
 static inline int jpeg_hw_decode(const struct device *dev, const uint8_t *src,
@@ -45,25 +44,30 @@ static inline int jpeg_hw_decode(const struct device *dev, const uint8_t *src,
   return DEVICE_API_GET(jpeg_hw, dev)->decode(dev, src, src_size, dst);
 }
 
-static inline int jpeg_hw_poll(const struct device *dev, uint32_t timeout_ms) {
+static inline int jpeg_hw_poll(const struct device *dev, uint32_t timeout_ms,
+                               struct jpeg_out_prop *prop) {
   __ASSERT_NO_MSG(DEVICE_API_IS(jpeg_hw, dev));
 
-  return DEVICE_API_GET(jpeg_hw, dev)->poll(dev, timeout_ms);
+  return DEVICE_API_GET(jpeg_hw, dev)->poll(dev, timeout_ms, prop);
 }
 
-static inline int jpeg_hw_get_prop(const struct device *dev,
-                                   struct jpeg_out_prop *prop) {
+static inline int jpeg_color_convert_helper(const struct device *dev,
+                                            struct jpeg_out_prop *prop,
+                                            const uint8_t *src, uint8_t *dst) {
   __ASSERT_NO_MSG(DEVICE_API_IS(jpeg_hw, dev));
 
-  return DEVICE_API_GET(jpeg_hw, dev)->get_prop(dev, prop);
+  return DEVICE_API_GET(jpeg_hw, dev)->cc_helper(dev, prop, src, dst);
 }
 
-static inline int jpeg_hw_to_rgb888(const struct device *dev,
-                                    const uint8_t *src, size_t src_size,
-                                    uint8_t *dst) {
-  __ASSERT_NO_MSG(DEVICE_API_IS(jpeg_hw, dev));
-
-  return DEVICE_API_GET(jpeg_hw, dev)->to_rgb888(dev, src, src_size, dst);
+static inline int jpeg_hw_decode_blocking(const struct device *dev,
+                                          const uint8_t *src, size_t src_size,
+                                          uint8_t *dst,
+                                          struct jpeg_out_prop *prop) {
+  int ret = jpeg_hw_decode(dev, src, src_size, dst);
+  if (ret) {
+    return ret;
+  }
+  ret = jpeg_hw_poll(dev, 0, prop);
 }
 
 #endif /*APP_DRIVERS_STM32_JPEG_HW_H_*/

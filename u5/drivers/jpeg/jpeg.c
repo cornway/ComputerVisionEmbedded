@@ -48,12 +48,6 @@ struct jpeg_hw_data {
 
 struct jpeg_hw_config {};
 
-// #define GPDMA_CHANNEL_A_IRQn GPDMA1_Channel12_IRQn
-// #define GPDMA_CHANNEL_B_IRQn GPDMA1_Channel13_IRQn
-
-#define GPDMA_CHANNEL_RX GPDMA1_Channel3
-#define GPDMA_CHANNEL_TX GPDMA1_Channel2
-
 #define CHUNK_SIZE_IN ((uint32_t)(128))
 #define CHUNK_SIZE_OUT ((uint32_t)(512))
 
@@ -175,57 +169,14 @@ static int jpeg_hw_dma_init(DMA_HandleTypeDef *hdma, struct stream *stream) {
   if ((enum dma_channel_direction)PERIPHERAL_TO_MEMORY ==
       stream->dma_cfg.channel_direction) {
 
-    // TODO: Remove, this is debug
-    if (GPDMA_CHANNEL_TX != dma_channel) {
-      LOG_ERR("Wrong TX channel selected ! expected = %p, given = %p",
-              GPDMA_CHANNEL_TX, dma_channel);
-      return -1;
-    }
-
-    if (GPDMA1_REQUEST_JPEG_TX != stream->dma_cfg.dma_slot) {
-      LOG_ERR("Wrong Slot for TX channel selected ! expected = %d, given = %d",
-              GPDMA1_REQUEST_JPEG_TX, stream->dma_cfg.dma_slot);
-      return -1;
-    }
-
     hdma->Instance = dma_channel;
     hdma->Init.Request = stream->dma_cfg.dma_slot;
     hdma->Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
     hdma->Init.Direction = DMA_PERIPH_TO_MEMORY;
     hdma->Init.SrcInc = DMA_SINC_FIXED;
     hdma->Init.DestInc = DMA_DINC_INCREMENTED;
-    hdma->Init.SrcDataWidth = DMA_SRC_DATAWIDTH_WORD;
-    hdma->Init.DestDataWidth = DMA_DEST_DATAWIDTH_WORD;
-    hdma->Init.Priority = DMA_LOW_PRIORITY_HIGH_WEIGHT;
-    hdma->Init.SrcBurstLength = 8;
-    hdma->Init.DestBurstLength = 8;
-    hdma->Init.TransferAllocatedPort =
-        DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT1;
-    hdma->Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
-    hdma->Init.Mode = DMA_NORMAL;
-    if (HAL_DMA_Init(hdma) != HAL_OK) {
-      LOG_ERR("HAL_DMA_Init Failed");
-      return -1;
-    }
-
-    if (HAL_DMA_ConfigChannelAttributes(hdma, DMA_CHANNEL_NPRIV) != HAL_OK) {
-      LOG_ERR("HAL_DMA_ConfigChannelAttributes Failed");
-      return -1;
-    }
   } else {
     // RX channel -> MEMORY_TO_PERIPHERAL
-
-    if (GPDMA_CHANNEL_RX != dma_channel) {
-      LOG_ERR("Wrong RX channel selected ! expected = %p, given = %p",
-              GPDMA_CHANNEL_RX, dma_channel);
-      return -1;
-    }
-
-    if (GPDMA1_REQUEST_JPEG_RX != stream->dma_cfg.dma_slot) {
-      LOG_ERR("Wrong Slot for TX channel selected ! expected = %d, given = %d",
-              GPDMA1_REQUEST_JPEG_RX, stream->dma_cfg.dma_slot);
-      return -1;
-    }
 
     /* GPDMA1_REQUEST_JPEG_RX Init */
     hdma->Instance = (DMA_Channel_TypeDef *)LL_DMA_GET_CHANNEL_INSTANCE(
@@ -235,30 +186,30 @@ static int jpeg_hw_dma_init(DMA_HandleTypeDef *hdma, struct stream *stream) {
     hdma->Init.Direction = DMA_MEMORY_TO_PERIPH;
     hdma->Init.SrcInc = DMA_SINC_INCREMENTED;
     hdma->Init.DestInc = DMA_DINC_FIXED;
-    hdma->Init.SrcDataWidth = DMA_SRC_DATAWIDTH_WORD;
-    hdma->Init.DestDataWidth = DMA_DEST_DATAWIDTH_WORD;
-    hdma->Init.Priority = DMA_LOW_PRIORITY_HIGH_WEIGHT;
-    hdma->Init.SrcBurstLength = 8;
-    hdma->Init.DestBurstLength = 8;
-    hdma->Init.TransferAllocatedPort =
-        DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT1;
-    hdma->Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
-    hdma->Init.Mode = DMA_NORMAL;
-    if (HAL_DMA_Init(hdma) != HAL_OK) {
-      LOG_ERR("HAL_DMA_Init Failed");
-      return -1;
-    }
+  }
 
-    if (HAL_DMA_ConfigChannelAttributes(hdma, DMA_CHANNEL_NPRIV) != HAL_OK) {
-      LOG_ERR("HAL_DMA_ConfigChannelAttributes Failed");
-      return -1;
-    }
+  hdma->Init.SrcDataWidth = DMA_SRC_DATAWIDTH_WORD;
+  hdma->Init.DestDataWidth = DMA_DEST_DATAWIDTH_WORD;
+  hdma->Init.Priority = DMA_LOW_PRIORITY_HIGH_WEIGHT;
+  hdma->Init.SrcBurstLength = 8;
+  hdma->Init.DestBurstLength = 8;
+  hdma->Init.TransferAllocatedPort =
+      DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT1;
+  hdma->Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
+  hdma->Init.Mode = DMA_NORMAL;
+
+  if (HAL_DMA_Init(hdma) != HAL_OK) {
+    LOG_ERR("HAL_DMA_Init Failed");
+    return -EINVAL;
+  }
+
+  if (HAL_DMA_ConfigChannelAttributes(hdma, DMA_CHANNEL_NPRIV) != HAL_OK) {
+    LOG_ERR("HAL_DMA_ConfigChannelAttributes Failed");
+    return -EINVAL;
   }
 
   return ret;
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static int jpeg_hw_init(const struct device *dev) {
 
@@ -327,8 +278,10 @@ static int _jpeg_hw_decode(const struct device *dev, const uint8_t *src,
   return ret == HAL_OK ? 0 : -EINVAL;
 }
 
-static int _jpeg_hw_poll(const struct device *dev, uint32_t timeout_ms) {
+static int _jpeg_hw_poll(const struct device *dev, uint32_t timeout_ms,
+                         struct jpeg_out_prop *prop) {
   uint32_t retry_count = 0;
+  int ret = 0;
   struct jpeg_hw_data *dev_data = dev->data;
   while (1) {
 
@@ -337,45 +290,75 @@ static int _jpeg_hw_poll(const struct device *dev, uint32_t timeout_ms) {
     }
 
     if (timeout_ms && retry_count >= timeout_ms) {
+      ret = -EBUSY;
       break;
     }
     retry_count++;
 
     k_sleep(K_MSEC(1));
   }
-  atomic_set(&dev_data->data_ready, 0);
-  return retry_count >= timeout_ms ? -1 : 0;
+
+  if (0 == ret) {
+    atomic_set(&dev_data->data_ready, 0);
+    *prop = dev_data->out_prop;
+  }
+
+  return ret;
 }
 
-static int _jpeg_hw_get_prop(const struct device *dev,
-                             struct jpeg_out_prop *prop) {
+static inline uint32_t _jpeg_get_in_size(JPEG_ConfTypeDef *pInfo,
+                                         uint32_t NrMCUs) {
 
-  struct jpeg_hw_data *dev_data = dev->data;
-  struct jpeg_out_prop *out_prop = &dev_data->out_prop;
+  switch (pInfo->ColorSpace) {
+  case JPEG_GRAYSCALE_COLORSPACE: {
+    return NrMCUs * GRAY_444_BLOCK_SIZE;
+  }
+  case JPEG_CMYK_COLORSPACE: {
+    return NrMCUs * CMYK_444_BLOCK_SIZE;
+  }
+  case JPEG_YCBCR_COLORSPACE: {
 
-  *prop = *out_prop;
+    switch (pInfo->ChromaSubsampling) {
+    case 0: // 4:4:4
+      return NrMCUs * YCBCR_444_BLOCK_SIZE;
+    case 1: // 4:2:2
+      return NrMCUs * YCBCR_422_BLOCK_SIZE;
+    case 2: // 4:1:1
+      return NrMCUs * YCBCR_420_BLOCK_SIZE;
+    case 3: // 4:2:0
+      return NrMCUs * YCBCR_420_BLOCK_SIZE;
+    default: {
+      LOG_ERR("Unknown ChromaSubsampling");
+      return 0;
+    }
+    }
+  }
+  default: {
+    LOG_ERR("Unknown ColorSpace");
+    return 0;
+  }
+  }
   return 0;
 }
 
-int _jpeg_hw_to_rgb888(const struct device *dev, const uint8_t *src,
-                       size_t src_size, uint8_t *dst) {
+static int _jpeg_color_convert_helper(const struct device *dev,
+                                      struct jpeg_out_prop *prop,
+                                      const uint8_t *src, uint8_t *dst) {
 
   JPEG_ConfTypeDef pInfo;
-  struct jpeg_hw_data *dev_data = dev->data;
-  struct jpeg_out_prop *out_prop = &dev_data->out_prop;
 
-  pInfo.ColorSpace = out_prop->color_space == JpegColorSpaceGray
+  pInfo.ColorSpace = prop->color_space == JpegColorSpaceGray
                          ? (uint32_t)JPEG_GRAYSCALE_COLORSPACE
-                     : out_prop->color_space == JpegColorSpaceYCBCR
+                     : prop->color_space == JpegColorSpaceYCBCR
                          ? (uint32_t)JPEG_YCBCR_COLORSPACE
-                     : out_prop->color_space == JpegColorSpaceCMYK
+                     : prop->color_space == JpegColorSpaceCMYK
                          ? (uint32_t)JPEG_CMYK_COLORSPACE
                          : (uint32_t)-1;
 
-  pInfo.ChromaSubsampling = (uint32_t)out_prop->chroma;
-  pInfo.ImageHeight = out_prop->width;
-  pInfo.ImageWidth = out_prop->height;
-  pInfo.ImageQuality = out_prop->quality;
+  pInfo.ChromaSubsampling = (uint32_t)prop->chroma;
+  pInfo.ImageHeight = prop->width;
+  pInfo.ImageWidth = prop->height;
+  pInfo.ImageQuality = prop->quality;
 
   JPEG_YCbCrToRGB_Convert_Function convert_function;
   uint32_t ImageNbMCUs = 0;
@@ -387,9 +370,15 @@ int _jpeg_hw_to_rgb888(const struct device *dev, const uint8_t *src,
     return -EINVAL;
   }
 
-  LOG_INF("ImageNbMCUs = %d size = %d", ImageNbMCUs, ImageNbMCUs * 256);
-
   uint32_t ConvertedDataCount = 0;
+  uint32_t inSize = _jpeg_get_in_size(&pInfo, ImageNbMCUs);
+
+  LOG_INF("ImageNbMCUs = %d size = %d", ImageNbMCUs, inSize);
+
+  if (0 == inSize) {
+    return -EINVAL;
+  }
+
   uint32_t NrBlocks =
       convert_function(src, dst, 0, ImageNbMCUs * 256, &ConvertedDataCount);
 
@@ -399,11 +388,11 @@ int _jpeg_hw_to_rgb888(const struct device *dev, const uint8_t *src,
   return NrBlocks ? NrBlocks : -EINVAL;
 }
 
-static DEVICE_API(jpeg_hw,
-                  jpeg_hw_driver_api) = {.decode = _jpeg_hw_decode,
-                                         .poll = _jpeg_hw_poll,
-                                         .get_prop = _jpeg_hw_get_prop,
-                                         .to_rgb888 = _jpeg_hw_to_rgb888};
+static DEVICE_API(jpeg_hw, jpeg_hw_driver_api) = {
+    .decode = _jpeg_hw_decode,
+    .poll = _jpeg_hw_poll,
+    .cc_helper = _jpeg_color_convert_helper,
+};
 
 #define JPEG_DMA_CHANNEL_INIT(stream, index, dir, src_dev, dest_dev)           \
   .stream = {                                                                  \
