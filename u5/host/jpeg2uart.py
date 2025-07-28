@@ -5,7 +5,7 @@ import time
 # --- Configuration ---
 VIDEO_DEVICE = 0               # change if you have multiple cameras
 SERIAL_PORT  = '/dev/ttyUSB0'  # replace with your serial device
-BAUDRATE     = 115200          # match on the receiving end
+BAUDRATE     = 921600          # match on the receiving end
 WIDTH, HEIGHT = 80, 80       # target resolution
 
 # --- Initialize camera and serial ---
@@ -27,7 +27,6 @@ try:
             print("Failed to grab frame")
             break
 
-        # 2. Resize to 160x120
         frame_small = cv2.resize(frame, (WIDTH, HEIGHT))
 
         # 3. Compress to JPEG in memory
@@ -65,7 +64,6 @@ try:
             packet = length_prefix + data
             ser.write(packet)
             ser.flush()
-            print(length_prefix[0], length_prefix[1])
             print(f"Sent {len(data)} bytes")
 
         elif key == ord('q'):

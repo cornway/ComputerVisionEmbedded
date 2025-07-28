@@ -9,8 +9,22 @@
 #endif
 
 #include "uart.hpp"
+#include <app/drivers/jpeg.h>
 
 #include "application.h"
+
+static inline uint8_t clamp_u8(int v) {
+  if (v < 0)
+    return 0;
+  if (v > 255)
+    return 255;
+  return (uint8_t)v;
+}
+
+void yuyv_to_rgb888(const uint8_t *yuyv_buf, uint8_t *rgb_buf, int width,
+                    int height);
+
+#define JPEG_DEVICE_NODE DT_CHOSEN(zephyr_jpeg)
 
 #define NAND_PATH(_path) ("/NAND:" _path)
 
@@ -22,8 +36,11 @@ static cv::CascadeClassifier faceCascade;
 static uint8_t uart_ring_buf[UART_RING_BUF_SIZE];
 
 static lv_obj_t *canvas;
+static lv_obj_t *jpeg_img;
 
 UartEx uartEx = UartEx(uart_ring_buf, sizeof(uart_ring_buf));
+
+const struct device *jpeg_dev = DEVICE_DT_GET(JPEG_DEVICE_NODE);
 
 int init() {
 
@@ -49,16 +66,22 @@ int init() {
   lv_canvas_fill_bg(canvas, lv_color_hex3(0xccc), LV_OPA_COVER);
   lv_obj_center(canvas);
 
+  jpeg_img = lv_img_create(lv_screen_active());
+
   uartEx.init();
   uartEx.trigger();
 
+  if (!device_is_ready(jpeg_dev)) {
+    printf("%s JPEG device not ready", jpeg_dev->name);
+    return -ENODEV;
+  }
   return 0;
 }
 
 #define TMP_BUF_WIDTH 400
 #define TMP_BUF_HEIGHT 400
 
-static uint8_t tmp_buf[TMP_BUF_WIDTH * TMP_BUF_HEIGHT];
+// static uint8_t tmp_buf[TMP_BUF_WIDTH * TMP_BUF_HEIGHT];
 
 int loop() {
 
@@ -109,6 +132,7 @@ int loop() {
   Gfx::fit(src, dst);
 #endif
 
+#if defined(CONFIG_OPENCV_LIB)
   uint32_t jpeg_buf_len = uartEx.tryReadHeader();
 
   if (0 == jpeg_buf_len) {
@@ -167,6 +191,51 @@ int loop() {
   dst.cf = LV_COLOR_FORMAT_L8;
 
   Gfx::fit(canvas, src, dst);
+#endif
+
+  uint32_t jpeg_buf_len = uartEx.tryReadHeader();
+
+  if (0 == jpeg_buf_len) {
+    return 0;
+  }
+
+  // memset(tmp_buf, 0, sizeof(tmp_buf));
+
+  static uint8_t uart_buf[8192];
+  static uint8_t yuyv_buf[8192 * 2];
+  static uint8_t rgb_buf[80 * 80 * 3];
+
+  jpeg_buf_len = uartEx.tryRead(uart_buf, jpeg_buf_len);
+
+  uartEx.trigger();
+
+  jpeg_buf_len = ROUND_UP(jpeg_buf_len, 4);
+
+  jpeg_hw_decode(jpeg_dev, uart_buf, jpeg_buf_len, yuyv_buf);
+
+  jpeg_hw_poll(jpeg_dev, 0);
+
+  struct jpeg_out_prop jpeg_prop;
+
+  jpeg_hw_get_prop(jpeg_dev, &jpeg_prop);
+
+  printf("JPEG done w = %d, h = %d, color = %d chroma = %d\n", jpeg_prop.width,
+         jpeg_prop.height, jpeg_prop.color_space, jpeg_prop.chroma);
+
+  int img_size = jpeg_prop.height * jpeg_prop.width * 4;
+
+  jpeg_hw_to_rgb888(jpeg_dev, yuyv_buf, jpeg_prop.height * jpeg_prop.width * 2,
+                    rgb_buf);
+
+  static lv_img_dsc_t img_dsc;
+  img_dsc.header.w = jpeg_prop.width;
+  img_dsc.header.h = jpeg_prop.height;
+  img_dsc.header.cf = LV_COLOR_FORMAT_RGB888;
+  img_dsc.data_size = jpeg_prop.height * jpeg_prop.width * 3;
+  img_dsc.data = rgb_buf;
+
+  lv_img_set_src(jpeg_img, &img_dsc);
+  lv_obj_center(jpeg_img);
 
   return 0;
 }

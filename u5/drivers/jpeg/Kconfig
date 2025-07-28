@@ -1,0 +1,36 @@
+# Copyright (c) 2025 Grinreflex
+
+menu "STM32 JPEG hw decoder"
+
+config STM32_JPEG
+	bool "STM32 JPEG HW decoder device drivers"
+    default n
+
+    # depends on DMA_STM32
+
+    select USE_STM32_HAL_DMA
+    select USE_STM32_HAL_JPEG
+    select USE_STM32_HAL_CORTEX
+    select USE_STM32_HAL_DMA_EX
+
+	help
+	  This option enables STM32 JPEG HW decoder.
+
+config STM32_JPEG_LOG_LEVEL
+    int "STM32_JPEG_LOG_LEVEL"
+    default 3
+
+endmenu
+
+if STM32_JPEG
+
+config STM32_JPEG_INIT_PRIORITY
+	int "STM32 JPEG HW decoder device drivers init priority"
+	default KERNEL_INIT_PRIORITY_DEVICE
+	help
+	  STM32 JPEG HW decoder drivers init priority.
+
+module = STM32_JPEG
+module-str = stm32-jpeg
+
+endif # STM32_JPEG

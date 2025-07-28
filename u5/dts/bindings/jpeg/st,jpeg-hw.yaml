@@ -1,0 +1,9 @@
+
+description: |
+  stm32 jpeg hw decoder
+
+compatible: "st,jpeg-hw"
+
+include: base.yaml
+
+properties: {}
