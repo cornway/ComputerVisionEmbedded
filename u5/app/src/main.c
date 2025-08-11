@@ -32,10 +32,6 @@ LOG_MODULE_REGISTER(app);
 #include <app/lib/tflm.h>
 #endif
 
-#if defined(CONFIG_OPENCV_LIB)
-#include <opencv_sample.h>
-#endif
-
 #include "application.h"
 
 #define AUTOMOUNT_NODE DT_NODELABEL(ffs2)

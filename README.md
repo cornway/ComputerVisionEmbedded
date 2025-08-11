@@ -19,16 +19,9 @@ west flash
 # in u5/app/prj.conf :
 # CONFIG_OPENCV_LIB=y
 
-source zephyr/zephyr-env.sh
-cd u5/lib/cv/opencv
-git patch apply ../opencv.patch
-cd ../
-rm -rf build
-mkdir -p build
-cd build ; cmake ..
-make -j`nproc`
+# Note: for opencv exceptions and rtti must be enabled
 
-cd <zephyrproject root>
+###########################################
 
 west build -b stm32u5g9j_dk2 u5/app/
 west flash
