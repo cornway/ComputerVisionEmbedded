@@ -1,0 +1,6 @@
+board:
+  name: grinreflex_dk1
+  full_name: Grinreflex Development kit v1.0
+  vendor: grinreflex
+  socs:
+    - name: stm32u5g9xx
