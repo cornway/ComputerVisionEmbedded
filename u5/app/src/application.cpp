@@ -49,7 +49,6 @@ int init() {
   uint32_t elapsed = end_ms - start_ms;
 
   std::cout << "faceCascade.load : " << elapsed << std::endl;
-#endif
 
   canvas = lv_canvas_create(lv_screen_active());
   lv_canvas_fill_bg(canvas, lv_color_hex3(0xccc), LV_OPA_COVER);
@@ -64,6 +63,8 @@ int init() {
     printf("%s JPEG device not ready", jpeg_dev->name);
     return -ENODEV;
   }
+#endif
+
   return 0;
 }
 
@@ -73,6 +74,7 @@ int init() {
 static uint8_t tmp_buf[TMP_BUF_WIDTH * TMP_BUF_HEIGHT];
 
 int loop() {
+#if defined(CONFIG_OPENCV_LIB)
   uint32_t jpeg_buf_len = uartEx.tryReadHeader();
 
   if (0 == jpeg_buf_len) {
@@ -151,7 +153,7 @@ int loop() {
   dst.cf = LV_COLOR_FORMAT_L8;
 
   Gfx::fit(canvas, src, dst);
-
+#endif
   return 0;
 }
 

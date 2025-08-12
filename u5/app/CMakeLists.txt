@@ -12,7 +12,7 @@ set(OVERLAY_FILE ${BOARDS}/${BOARD}.overlay)
 if(EXISTS ${OVERLAY_FILE})
     list(APPEND EXTRA_DTC_OVERLAY_FILE "${OVERLAY_FILE}")
 else()
-    message(FATAL_ERROR "${OVERLAY_FILE} not found")
+    message(WARNING "${OVERLAY_FILE} not found")
 endif()
 
 set(EXTRA_CONF_FILE

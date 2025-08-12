@@ -15,11 +15,6 @@
 		zephyr,jpeg = &jpeg0;
 	};
 
-	pointer {
-		compatible = "zephyr,lvgl-pointer-input";
-		input = <&gt911>;
-	};
-
 	fstab {
 		compatible = "zephyr,fstab";
 
