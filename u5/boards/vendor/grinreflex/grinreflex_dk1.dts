@@ -21,6 +21,7 @@
 		zephyr,flash = &flash0;
 		zephyr,code-partition = &slot0_partition;
 		zephyr,display = &st7735r_160x80;
+		zephyr,camera = &zephyr_camera_dvp;
 	};
 
 	aliases {
@@ -74,6 +75,29 @@
 			caset = [00 01 00 a0];
 			raset = [00 1a 00 69];
 		};
+	};
+
+	dcmi_camera_connector: connector_dcmi_camera {
+		compatible = "weact,dcmi-camera-connector";
+		#gpio-cells = <2>;
+		gpio-map-mask = <0xffffffff 0xffffffc0>;
+		gpio-map-pass-thru = <0 0x3f>;
+
+		gpio-map = <3  0 &gpiog 13  0>,  /* DVP_SDA (I2C1_SDA) OK*/
+			   <5  0 &gpiog 14  0>,  /* DVP_SCL (I2C1_SCL) OK*/
+			   <7  0 &gpiob 7  0>,  /* DVP_VSYNC OK*/
+			   <8  0 &gpioa 7  0>,  /* DVP_PWDN NC*/
+			   <9  0 &gpiod 8  0>,  /* DVP_HSYNC OK*/
+			   <12 0 &gpiod 7  0>,  /* DVP_D7 OK*/
+			   <13 0 &gpioa 8  0>,  /* DVP_XCLK (RCC_MCO1) OK*/
+			   <14 0 &gpiob 8  0>,  /* DVP_D6 OK*/
+			   <16 0 &gpiob 6  0>,  /* DVP_D5 OK*/
+			   <17 0 &gpiod 9  0>,  /* DVP_PCLK OK*/
+			   <18 0 &gpioe 4  0>,  /* DVP_D4 OK*/
+			   <19 0 &gpioc 6  0>,  /* DVP_D0 OK*/
+			   <20 0 &gpioc 9  0>,  /* DVP_D3 */
+			   <21 0 &gpioc 7  0>,  /* DVP_D1 */
+			   <22 0 &gpioc 8  0>;  /* DVP_D2 */
 	};
 
 };
@@ -154,7 +178,23 @@
 	pinctrl-0 = <&i2c1_scl_pg14 &i2c1_sda_pg13>;
 	pinctrl-names = "default";
 	status = "okay";
-	clock-frequency = <I2C_BITRATE_STANDARD>;
+	clock-frequency = <I2C_BITRATE_FAST>;
+
+	ov2640: ov2640@30 {
+		compatible = "ovti,ov2640";
+		reg = <0x30>;
+
+		supply-gpios = <&dcmi_camera_connector 8 GPIO_ACTIVE_HIGH>;
+		clock-rate-control = <0x80>;
+
+		status = "okay";
+
+		port {
+			ov2640_ep_out: endpoint {
+				remote-endpoint-label = "zephyr_camera_dvp_in";
+			};
+		};
+	};
 };
 
 &i2c2 {
@@ -366,4 +406,48 @@ zephyr_udc0: &usbotg_hs {
 		gpios = <15 GPIO_ACTIVE_LOW>;
 		output-high;
 	};
+};
+
+zephyr_camera_dvp: &dcmi {
+	pinctrl-0 = <&dcmi_hsync_pd8
+				&dcmi_pixclk_pd9
+				&dcmi_vsync_pb7
+		     	&dcmi_d0_pc6
+				&dcmi_d1_pc7
+				&dcmi_d2_pc8
+				&dcmi_d3_pc9
+		     	&dcmi_d4_pe4
+				&dcmi_d5_pb6
+				&dcmi_d6_pb8
+				&dcmi_d7_pb9>;
+	pinctrl-names = "default";
+
+	port {
+		zephyr_camera_dvp_in: endpoint {
+			remote-endpoint-label = "ov2640_ep_out";
+			bus-width = <8>;
+			hsync-active = <0>;
+			vsync-active = <0>;
+			pclk-sample = <1>;
+		};
+	};
+	status = "okay";
+};
+
+/* See reference manual (RM0456 Rev 6) page 390:
+ *   1000: HSI48 clock selected (hsi48_ck)
+ */
+#define MCO1_SEL_HSI48 8
+
+ /* See reference manual (RM0456 Rev 6) page 520:
+  *   010: division by 4
+  */
+#define MCO1_PRE_DIV_4 2
+
+&mco1 {
+	status = "okay";
+	clocks = <&rcc STM32_SRC_HSI48 MCO1_SEL(MCO1_SEL_HSI48)>;
+	prescaler = <MCO1_PRE(MCO1_PRE_DIV_4)>;
+	pinctrl-0 = <&rcc_mco_pa8>;
+	pinctrl-names = "default";
 };

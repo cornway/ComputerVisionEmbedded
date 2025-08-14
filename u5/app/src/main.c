@@ -28,6 +28,10 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(app);
 
+#if !DT_HAS_CHOSEN(zephyr_camera)
+#error No camera chosen in devicetree. Missing "--shield" or "--snippet video-sw-generator" flag?
+#endif
+
 #if defined(CONFIG_TFLITE_LIB)
 #include <app/lib/tflm.h>
 #endif
@@ -71,6 +75,7 @@ static void lv_btn_click_callback(lv_event_t *e) {
 int main(void) {
   char count_str[64] = {0};
   const struct device *display_dev;
+  const struct device *video_dev;
   lv_obj_t *count_label;
 
   // fs_example();
@@ -86,6 +91,12 @@ int main(void) {
     LOG_ERR("Device not ready, aborting test");
     return 0;
   }
+
+	video_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_camera));
+	if (!device_is_ready(video_dev)) {
+		LOG_ERR("%s device is not ready", video_dev->name);
+		return 0;
+	}
 
   lvgl_fs_sample();
 
@@ -121,8 +132,8 @@ int main(void) {
   fps_stop = k_uptime_get_32() + 1000;
 
   while (1) {
-    // sprintf(count_str, "%d", count);
-    // lv_label_set_text(count_label, count_str);
+    sprintf(count_str, "%d", count++);
+    lv_label_set_text(count_label, count_str);
     lv_timer_handler();
 
 #if 0
@@ -130,9 +141,11 @@ int main(void) {
       loop();
     }
 #endif
-    loop();
+    //loop();
 
-    k_sleep(K_MSEC(1));
+    k_sleep(K_MSEC(1000));
+
+    //printf("Im alive!\n");
 
     frames++;
     if (k_uptime_get_32() > fps_stop) {

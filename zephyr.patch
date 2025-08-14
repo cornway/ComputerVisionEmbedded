@@ -1,0 +1,92 @@
+diff --git a/drivers/video/video_stm32_dcmi.c b/drivers/video/video_stm32_dcmi.c
+index 363de09717b..3bcf7680f45 100644
+--- a/drivers/video/video_stm32_dcmi.c
++++ b/drivers/video/video_stm32_dcmi.c
+@@ -147,6 +147,28 @@ static int stm32_dma_init(const struct device *dev)
+ 
+ 	/*** Configure the DMA ***/
+ 	/* Set the parameters to be configured */
++
++    //config->dma.reg
++    hdma.Instance = (DMA_Channel_TypeDef *)LL_DMA_GET_CHANNEL_INSTANCE(
++        GPDMA1, config->dma.channel);
++    hdma.Init.Request = GPDMA1_REQUEST_DCMI_PSSI;
++    hdma.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
++    hdma.Init.Direction = DMA_PERIPH_TO_MEMORY;
++    hdma.Init.SrcInc = DMA_SINC_FIXED;
++    hdma.Init.DestInc = DMA_DINC_INCREMENTED;
++	hdma.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_WORD;
++  	hdma.Init.DestDataWidth = DMA_DEST_DATAWIDTH_WORD;
++
++	hdma.Init.Priority = DMA_LOW_PRIORITY_HIGH_WEIGHT;
++	hdma.Init.SrcBurstLength = 8;
++	hdma.Init.DestBurstLength = 8;
++	hdma.Init.TransferAllocatedPort =
++		DMA_SRC_ALLOCATED_PORT0 | DMA_DEST_ALLOCATED_PORT1;
++	hdma.Init.TransferEventMode = DMA_TCEM_BLOCK_TRANSFER;
++	hdma.Init.Mode = DMA_NORMAL;
++
++
++#if 0
+ 	hdma.Init.Request		= DMA_REQUEST_DCMI;
+ 	hdma.Init.Direction		= DMA_PERIPH_TO_MEMORY;
+ 	hdma.Init.PeriphInc		= DMA_PINC_DISABLE;
+@@ -155,6 +177,7 @@ static int stm32_dma_init(const struct device *dev)
+ 	hdma.Init.MemDataAlignment	= DMA_MDATAALIGN_WORD;
+ 	hdma.Init.Mode			= DMA_CIRCULAR;
+ 	hdma.Init.Priority		= DMA_PRIORITY_HIGH;
++#endif
+ #if defined(CONFIG_SOC_SERIES_STM32F7X) || defined(CONFIG_SOC_SERIES_STM32H7X)
+ 	hdma.Init.FIFOMode		= DMA_FIFOMODE_DISABLE;
+ #endif
+@@ -174,6 +197,11 @@ static int stm32_dma_init(const struct device *dev)
+ 		return -EIO;
+ 	}
+ 
++	if (HAL_DMA_ConfigChannelAttributes(&hdma, DMA_CHANNEL_NPRIV) != HAL_OK) {
++		LOG_ERR("HAL_DMA_ConfigChannelAttributes Failed");
++		return -EINVAL;
++	}
++
+ 	return 0;
+ }
+ 
+diff --git a/dts/arm/st/u5/stm32u5.dtsi b/dts/arm/st/u5/stm32u5.dtsi
+index 1ea790dd980..23936ab5ef3 100644
+--- a/dts/arm/st/u5/stm32u5.dtsi
++++ b/dts/arm/st/u5/stm32u5.dtsi
+@@ -887,6 +887,21 @@
+ 			};
+ 		};
+ 
++		#define GPDMA1_REQUEST_DCMI_PSSI     86U
++		#define   DCMI_PSSI_IRQn             119
++
++		dcmi: dcmi@4202C000 {
++			compatible = "st,stm32-dcmi";
++			reg = <0x4202C000 0x400>;
++			interrupts = <DCMI_PSSI_IRQn 0>;
++			interrupt-names = "dcmi";
++			clocks = <&rcc STM32_CLOCK(AHB2, 0U)>;
++
++			dmas = <&gpdma1 4 GPDMA1_REQUEST_DCMI_PSSI (STM32_DMA_PERIPH_TO_MEMORY | STM32_DMA_PERIPH_NO_INC |
++				STM32_DMA_MEM_INC | STM32_DMA_PERIPH_8BITS | STM32_DMA_MEM_32BITS |
++				STM32_DMA_PRIORITY_HIGH) STM32_DMA_FIFO_1_4>;
++			status = "okay";
++		};
+ 	};
+ 
+ 	swj_port: swj_port {
+diff --git a/samples/boards/st/uart/circular_dma/boards/nucleo_wba55cg.overlay b/samples/boards/st/uart/circular_dma/boards/nucleo_wba55cg.overlay
+index 751836f8554..52382316dd1 100644
+--- a/samples/boards/st/uart/circular_dma/boards/nucleo_wba55cg.overlay
++++ b/samples/boards/st/uart/circular_dma/boards/nucleo_wba55cg.overlay
+@@ -6,7 +6,7 @@
+ 
+ &usart1 {
+ 	dmas = <&gpdma1 0 12 (STM32_DMA_PERIPH_TX)
+-		&gpdma1 1 11 (STM32_DMA_MODE_CYCLIC | STM32_DMA_PERIPH_RX | STM32_DMA_MEM_8BITS)>;
++			&gpdma1 1 11 (STM32_DMA_MODE_CYCLIC | STM32_DMA_PERIPH_RX | STM32_DMA_MEM_8BITS)>;
+ 	dma-names = "tx", "rx";
+ 	fifo-enable;
+ };

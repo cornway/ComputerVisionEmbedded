@@ -39,23 +39,6 @@
 		status = "okay";
 	};
 
-	zephyr_camera_i2c: i2c1 {
-		#address-cells = <1>;
-	    #size-cells    = <0>;
-
-		status = "okay";
-		clock-frequency = <I2C_BITRATE_FAST>;
-
-		ov2640: ov2640@30 {
-			compatible = "ovti,ov2640";
-			reg = <0x30>;
-			status = "okay";
-
-			port {
-			};
-		};
-	};
-
 	jpeg0: jpeg_hw {
 		compatible = "st,jpeg-hw";
 		dmas = <&gpdma1 2 125 (STM32_DMA_PERIPH_RX | STM32_DMA_PERIPH_32BITS | STM32_DMA_MEM_32BITS)
@@ -64,17 +47,6 @@
 		status = "okay";
 	};
 };
-
-/*
-&spi1 {
-	clock-frequency = <DT_FREQ_M(2)>;
-	
-	pinctrl-0 = <&spi1_sck_pa5 &spi1_miso_pa6 &spi1_mosi_pb5>;
-	pinctrl-names = "default";
-	cs-gpios = <&gpiob 11 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
-	status = "okay";
-};
-*/
 
 &usart2 {
 	dmas = <&gpdma1 0 27 (STM32_DMA_PERIPH_TX)
