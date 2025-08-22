@@ -18,11 +18,10 @@ void fit(lv_obj_t *canvas, const GfxBuffer &src, const GfxBuffer &dst) {
       .data = src.buf,
   };
 
-  // TODO: don't use screen ?
   lv_canvas_set_buffer(canvas, dst.buf, dst.width, dst.height,
                        static_cast<lv_color_format_t>(dst.cf));
 
-  lv_layer_t layer;
+  lv_layer_t layer{};
   lv_canvas_init_layer(canvas, &layer);
   lv_draw_image_dsc_t img_dsc;
   lv_draw_image_dsc_init(&img_dsc);

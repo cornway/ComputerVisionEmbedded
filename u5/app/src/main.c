@@ -1,159 +1,79 @@
 /*
- * Copyright (c) 2018 Jan Van Winkel <jan.van_winkel@dxplore.eu>
+ * Copyright (c) 2024 Charles Dias <charlesdias.cd@outlook.com>
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <lvgl.h>
-#include <lvgl_input_device.h>
-#include <stdio.h>
-#include <string.h>
-#include <zephyr/device.h>
-#include <zephyr/devicetree.h>
-#include <zephyr/drivers/display.h>
-#include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
-
-#include <stdio.h>
-#include <zephyr/fs/fs.h>
-
-#include <zephyr/usb/class/usbd_msc.h>
-#include <zephyr/usb/usb_device.h>
-#include <zephyr/usb/usbd.h>
-
-#include <lvgl_fs.h>
-#include <sample_usbd.h>
-
-#define LOG_LEVEL CONFIG_LOG_DEFAULT_LEVEL
+#include <zephyr/device.h>
+#include <zephyr/drivers/display.h>
+#include <zephyr/drivers/video.h>
+#include <zephyr/drivers/video-controls.h>
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(app);
+#include <lvgl.h>
+
+#define CONFIG_VIDEO_WIDTH 160
+#define CONFIG_VIDEO_HEIGHT 120
+
+#include "grinreflex.h"
+
+LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 
 #if !DT_HAS_CHOSEN(zephyr_camera)
 #error No camera chosen in devicetree. Missing "--shield" or "--snippet video-sw-generator" flag?
 #endif
 
-#if defined(CONFIG_TFLITE_LIB)
-#include <app/lib/tflm.h>
+#if !DT_HAS_CHOSEN(zephyr_display)
+#error No display chosen in devicetree. Missing "--shield" flag?
 #endif
 
-#include "application.h"
+static const struct device *video_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_camera));
+static const struct device *display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 
-#define AUTOMOUNT_NODE DT_NODELABEL(ffs2)
-FS_FSTAB_DECLARE_ENTRY(AUTOMOUNT_NODE);
+int main(void)
+{
+	struct video_buffer *vbuf = &(struct video_buffer){};
+	enum video_buf_type type = VIDEO_BUF_TYPE_OUTPUT;
+	int err;
 
-static uint32_t count;
-static struct usbd_context *sample_usbd;
+	init();
 
-USBD_DEFINE_MSC_LUN(flash, "NAND", "Zephyr", "FlashDisk", "0.00");
-
-static int enable_usb_device_next(void) {
-  int err;
-
-  sample_usbd = sample_usbd_init_device(NULL);
-  if (sample_usbd == NULL) {
-    LOG_ERR("Failed to initialize USB device");
-    return -ENODEV;
-  }
-
-  err = usbd_enable(sample_usbd);
-  if (err) {
-    LOG_ERR("Failed to enable device support");
-    return err;
-  }
-
-  LOG_DBG("USB device support enabled");
-
-  return 0;
-}
-
-static void lv_btn_click_callback(lv_event_t *e) {
-  ARG_UNUSED(e);
-
-  count = 0;
-}
-
-int main(void) {
-  char count_str[64] = {0};
-  const struct device *display_dev;
-  const struct device *video_dev;
-  lv_obj_t *count_label;
-
-  // fs_example();
-
-  int ret = 0;
-  ret = enable_usb_device_next();
-
-  if (ret != 0) {
-    LOG_ERR("Failed to enable USB");
-  }
-  display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
-  if (!device_is_ready(display_dev)) {
-    LOG_ERR("Device not ready, aborting test");
-    return 0;
-  }
-
-	video_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_camera));
-	if (!device_is_ready(video_dev)) {
-		LOG_ERR("%s device is not ready", video_dev->name);
-		return 0;
+	while (1)
+	{
+		loop(1);
 	}
 
-  lvgl_fs_sample();
+	lv_img_dsc_t video_img = {
+		.header.w = CONFIG_VIDEO_WIDTH,
+		.header.h = CONFIG_VIDEO_HEIGHT,
+		.data_size = CONFIG_VIDEO_WIDTH * CONFIG_VIDEO_HEIGHT * sizeof(lv_color_t),
+		.header.cf = LV_COLOR_FORMAT_NATIVE,
+//		.data = (const uint8_t *)buffers[0]->buffer,
+	};
 
-  lv_obj_t *hello_world_label;
-  if (IS_ENABLED(CONFIG_LV_Z_POINTER_INPUT)) {
-    lv_obj_t *hello_world_button;
+	lv_obj_t *screen = lv_img_create(lv_scr_act());
 
-    hello_world_button = lv_button_create(lv_screen_active());
-    lv_obj_align(hello_world_button, LV_ALIGN_TOP_MID, 0, -15);
-    lv_obj_add_event_cb(hello_world_button, lv_btn_click_callback,
-                        LV_EVENT_CLICKED, NULL);
-    hello_world_label = lv_label_create(hello_world_button);
-  } else {
-    hello_world_label = lv_label_create(lv_screen_active());
-  }
+	LOG_INF("- Capture started");
 
-  lv_label_set_text(hello_world_label, "Hello world!");
-  lv_obj_align(hello_world_label, LV_ALIGN_TOP_MID, 0, 0);
+	/* Grab video frames */
+	vbuf->type = type;
+	while (1) {
+		err = video_dequeue(video_dev, &vbuf, K_FOREVER);
+		if (err) {
+			LOG_ERR("Unable to dequeue video buf");
+			return 0;
+		}
 
-  count_label = lv_label_create(lv_screen_active());
-  lv_obj_align(count_label, LV_ALIGN_BOTTOM_MID, 0, 0);
+		video_img.data = (uint8_t *)vbuf->buffer;
+		lv_img_set_src(screen, &video_img);
+		lv_obj_align(screen, LV_ALIGN_BOTTOM_LEFT, 0, 0);
 
-  lv_timer_handler();
-  display_blanking_off(display_dev);
+		lv_task_handler();
 
-  if (init()) {
-    return -1;
-  }
-
-  uint32_t fps_stop = 0;
-  uint32_t frames = 0;
-
-  fps_stop = k_uptime_get_32() + 1000;
-
-  while (1) {
-    sprintf(count_str, "%d", count++);
-    lv_label_set_text(count_label, count_str);
-    lv_timer_handler();
-
-#if 0
-    if (count == 0 && prev_count != 0) {
-      loop();
-    }
-#endif
-    //loop();
-
-    k_sleep(K_MSEC(1000));
-
-    //printf("Im alive!\n");
-
-    frames++;
-    if (k_uptime_get_32() > fps_stop) {
-      int fps = (frames * 1000) / (1000 + k_uptime_get_32() - fps_stop);
-      sprintf(count_str, "FPS: %d", fps);
-      lv_label_set_text(count_label, count_str);
-      fps_stop = k_uptime_get_32() + 1000;
-      frames = 0;
-    }
-  }
+		err = video_enqueue(video_dev, vbuf);
+		if (err) {
+			LOG_ERR("Unable to requeue video buf");
+			return 0;
+		}
+	}
 }

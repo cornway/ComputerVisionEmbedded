@@ -9,6 +9,7 @@
 #include <st/u5/stm32u5g9zjtxq-pinctrl.dtsi>
 #include <zephyr/dt-bindings/display/panel.h>
 #include <zephyr/dt-bindings/input/input-event-codes.h>
+#include <st/u5/stm32u5.dtsi>
 
 / {
 	model = "STMicroelectronics STM32U5G9J DISCOVERY-2 KIT board";
@@ -41,7 +42,7 @@
 
 	mipi_dbi_st7735r_160x80 {
 		compatible = "zephyr,mipi-dbi-spi";
-		spi-dev = <&spi1>;
+		spi-dev = <&spi2>;
 		dc-gpios = <&gpiob 13 GPIO_ACTIVE_HIGH>;
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -212,6 +213,14 @@
 	status = "okay";
 };
 
+&spi2 {
+	pinctrl-0 = <&spi2_sck_pd3 &spi2_mosi_pd4>;
+	pinctrl-names = "default";
+	cs-gpios = <&gpiob 14 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+	clock-frequency = <DT_FREQ_M(66)>;
+	status = "okay";
+};
+
 &timers1 {
 	st,prescaler = <1>;
 	status = "okay";
@@ -351,8 +360,8 @@ zephyr_udc0: &usbotg_hs {
 	mx66lm1g45: xspi-nor-flash@0 {
 		compatible = "st,stm32-xspi-nor";
 		reg = <0>;
-		size = <DT_SIZE_M(1024)>; /* 1 Gbits */
-		ospi-max-frequency = <DT_FREQ_M(133)>;
+		size = <DT_SIZE_M(512)>; /* 1 Gbits */
+		ospi-max-frequency = <DT_FREQ_M(128)>;
 		spi-bus-width = <XSPI_OCTO_MODE>;
 		data-rate = <XSPI_DTR_TRANSFER>;
 		four-byte-opcodes;
@@ -365,7 +374,7 @@ zephyr_udc0: &usbotg_hs {
 
 			extflash_partition: partition@0 {
 				label = "ext_storage";
-				reg = <0 DT_SIZE_M(128)>;
+				reg = <0 DT_SIZE_M(64)>;
 			};
 		};
 	};

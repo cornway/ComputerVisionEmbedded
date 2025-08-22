@@ -62,8 +62,8 @@ void HAL_JPEG_InfoReadyCallback(JPEG_HandleTypeDef *hjpeg,
   data->out_prop.height = pInfo->ImageWidth;
   data->out_prop.quality = pInfo->ImageQuality;
 
-  LOG_INF("ColorSpace = %u, ChromaSubsampling = %u", pInfo->ColorSpace,
-          pInfo->ChromaSubsampling);
+  //LOG_INF("ColorSpace = %u, ChromaSubsampling = %u", pInfo->ColorSpace,
+  //        pInfo->ChromaSubsampling);
 
   // LOG_INF("HAL_JPEG_InfoReadyCallback");
 }
@@ -271,9 +271,9 @@ static int _jpeg_hw_decode(const struct device *dev, const uint8_t *src,
       &dev_data->hjpeg, (uint8_t *)dev_data->in_prop.src_addr, CHUNK_SIZE_IN,
       (uint8_t *)dev_data->in_prop.dst_addr, CHUNK_SIZE_OUT);
 
-  LOG_INF("JPEG_Decode_DMA : src = %x dst = %x size = %d ret = %d",
-          dev_data->in_prop.src_addr, dev_data->in_prop.dst_addr,
-          dev_data->in_prop.src_size, ret);
+  //LOG_INF("JPEG_Decode_DMA : src = %x dst = %x size = %d ret = %d",
+  //        dev_data->in_prop.src_addr, dev_data->in_prop.dst_addr,
+  //        dev_data->in_prop.src_size, ret);
 
   return ret == HAL_OK ? 0 : -EINVAL;
 }
@@ -351,8 +351,8 @@ static int _jpeg_color_convert_helper(const struct device *dev,
   pInfo.ImageWidth = prop->height;
   pInfo.ImageQuality = prop->quality;
 
-  LOG_INF("ColorSpace = %u, ChromaSubsampling = %u", pInfo.ColorSpace,
-          pInfo.ChromaSubsampling);
+  //LOG_INF("ColorSpace = %u, ChromaSubsampling = %u", pInfo.ColorSpace,
+  //        pInfo.ChromaSubsampling);
 
   JPEG_YCbCrToRGB_Convert_Function convert_function;
   uint32_t ImageNbMCUs = 0;
@@ -367,7 +367,7 @@ static int _jpeg_color_convert_helper(const struct device *dev,
   uint32_t ConvertedDataCount = 0;
   uint32_t inSize = _jpeg_get_in_size(&pInfo, ImageNbMCUs);
 
-  LOG_INF("ImageNbMCUs = %d size = %d", ImageNbMCUs, inSize);
+  //LOG_INF("ImageNbMCUs = %d size = %d", ImageNbMCUs, inSize);
 
   if (0 == inSize) {
     return -EINVAL;
@@ -376,8 +376,8 @@ static int _jpeg_color_convert_helper(const struct device *dev,
   uint32_t NrBlocks =
       convert_function(src, dst, 0, inSize, &ConvertedDataCount);
 
-  LOG_INF("Decoded image : NrBlocks = %d, size = %d", NrBlocks,
-          ConvertedDataCount);
+  //LOG_INF("Decoded image : NrBlocks = %d, size = %d", NrBlocks,
+  //        ConvertedDataCount);
 
   return NrBlocks ? NrBlocks : -EINVAL;
 }

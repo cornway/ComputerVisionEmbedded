@@ -44,6 +44,7 @@ target_sources(app PRIVATE
     src/uart.cpp
     src/sample_usbd_init.c
     src/lvgl_fs_sample.c
-    src/application.cpp
     src/gfx_utils.cpp
+    src/grinreflex.cpp
+    src/video.cpp
 )

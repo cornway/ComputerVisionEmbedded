@@ -1,0 +1,177 @@
+
+
+#include <lvgl.h>
+#include <lvgl_input_device.h>
+#include <stdio.h>
+#include <string.h>
+#include <zephyr/device.h>
+#include <zephyr/devicetree.h>
+#include <zephyr/drivers/display.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/kernel.h>
+
+#include <stdio.h>
+#include <zephyr/fs/fs.h>
+
+#include <zephyr/usb/class/usbd_msc.h>
+#include <zephyr/usb/usb_device.h>
+#include <zephyr/usb/usbd.h>
+#include <sample_usbd.h>
+
+#include <lvgl_fs.h>
+#include <sample_usbd.h>
+
+#define LOG_LEVEL CONFIG_LOG_DEFAULT_LEVEL
+#include <zephyr/logging/log.h>
+LOG_MODULE_REGISTER(grinreflex_app);
+
+#include "grinreflex.h"
+#include "video.hpp"
+#include "gfx_utils.hpp"
+
+#include <app/drivers/jpeg.h>
+
+#define AUTOMOUNT_NODE DT_NODELABEL(ffs2)
+FS_FSTAB_DECLARE_ENTRY(AUTOMOUNT_NODE);
+
+static struct usbd_context *sample_usbd;
+static lv_obj_t *vid_canvas;
+
+#define LCD_WIDTH 160
+#define LCD_HEIGHT 120
+#define LCD_CF LV_COLOR_FORMAT_NATIVE
+static uint8_t lcd_frame_buffer[LCD_WIDTH * LCD_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(LCD_CF) * 2];
+
+#if CONFIG_GRINREFLEX_JPEG_VIDEO
+static uint8_t jpeg_frame_buffer[CONFIG_VIDEO_BUFFER_POOL_SZ_MAX/2];
+#endif
+
+USBD_DEFINE_MSC_LUN(flash, "NAND", "Zephyr", "FlashDisk", "0.00");
+
+static const struct device *video_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_camera));
+static const struct device *display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
+const struct device *jpeg_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_jpeg));
+
+static int enable_usb_device_next(void) {
+  int err;
+
+  sample_usbd = sample_usbd_init_device(NULL);
+  if (sample_usbd == NULL) {
+    LOG_ERR("Failed to initialize USB device");
+    return -ENODEV;
+  }
+
+  err = usbd_enable(sample_usbd);
+  if (err) {
+    LOG_ERR("Failed to enable device support");
+    return err;
+  }
+
+  LOG_DBG("USB device support enabled");
+
+  return 0;
+}
+
+static lv_img_dsc_t video_img;
+static lv_obj_t *screen;
+
+int init()
+{
+	if (!device_is_ready(display_dev)) {
+		LOG_ERR("Device not ready, aborting test");
+		return -ENODEV;
+	}
+
+    if (!device_is_ready(jpeg_dev)) {
+        printf("%s JPEG device not ready", jpeg_dev->name);
+        return -ENODEV;
+    }
+
+	if (0 && enable_usb_device_next() != 0) {
+		LOG_ERR("Failed to enable USB");
+        return -ENODEV;
+    }
+
+    Video::setup();
+
+    vid_canvas = lv_canvas_create(lv_screen_active());
+    lv_canvas_fill_bg(vid_canvas, lv_color_hex3(0xccc), LV_OPA_COVER);
+    lv_obj_center(vid_canvas);
+    
+    display_blanking_off(display_dev);
+
+    video_img.header.w = CONFIG_GRINREFLEX_VIDEO_WIDTH;
+	video_img.header.h = CONFIG_GRINREFLEX_VIDEO_HEIGHT;
+#if CONFIG_GRINREFLEX_JPEG_VIDEO
+	video_img.data_size = CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888);
+	video_img.header.cf = LV_COLOR_FORMAT_RGB888;
+#else
+	video_img.data_size = CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_NATIVE);
+	video_img.header.cf = LV_COLOR_FORMAT_NATIVE;
+#endif
+    screen = lv_img_create(lv_scr_act());
+
+    return 0;
+}
+
+int loop()
+{
+    struct video_buffer vbuf{};
+    struct video_buffer *vbuf_ptr = &vbuf;
+    struct jpeg_out_prop jpeg_prop;
+
+    vbuf_ptr->type = VIDEO_BUF_TYPE_OUTPUT;
+    
+    int err = video_dequeue(video_dev, &vbuf_ptr, K_FOREVER);
+    if (err) {
+        LOG_ERR("Unable to dequeue video buf");
+        return 0;
+    }
+
+#if CONFIG_GRINREFLEX_JPEG_VIDEO
+    jpeg_hw_decode(jpeg_dev, (uint8_t *)vbuf_ptr->buffer, vbuf_ptr->bytesused, jpeg_frame_buffer);
+
+    jpeg_hw_poll(jpeg_dev, 0, &jpeg_prop);
+
+    //printf("JPEG done w = %d, h = %d, color = %d chroma = %d\n", jpeg_prop.width,
+    //        jpeg_prop.height, jpeg_prop.color_space, jpeg_prop.chroma);
+
+    jpeg_color_convert_helper(jpeg_dev, &jpeg_prop, jpeg_frame_buffer, lcd_frame_buffer);
+
+    video_img.data = lcd_frame_buffer;
+#else
+    video_img.data = (uint8_t *)vbuf_ptr->buffer;
+#endif
+    lv_img_set_src(screen, &video_img);
+	lv_obj_align(screen, LV_ALIGN_BOTTOM_LEFT, 0, 0);
+
+#if 0
+    Gfx::GfxBuffer src{};
+    Gfx::GfxBuffer dst{};
+
+    src.buf = (uint8_t *)vbuf_ptr->buffer;
+    src.width = CONFIG_GRINREFLEX_VIDEO_WIDTH
+    src.height = CONFIG_GRINREFLEX_VIDEO_HEIGHT;
+    src.stride = CONFIG_GRINREFLEX_VIDEO_WIDTH * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_NATIVE);
+    src.cf = LV_COLOR_FORMAT_NATIVE;
+    src.size = vbuf_ptr->bytesused;
+
+    dst.buf = lcd_frame_buffer;
+    dst.width = LCD_WIDTH;
+    dst.height = LCD_HEIGHT;
+    dst.stride = LCD_WIDTH * LV_COLOR_FORMAT_GET_SIZE(LCD_CF);
+    dst.cf = LCD_CF;
+    dst.size = sizeof(lcd_frame_buffer);
+ 
+    Gfx::fit(vid_canvas, src, dst);
+#endif
+
+    lv_task_handler();
+
+    err = video_enqueue(video_dev, vbuf_ptr);
+    if (err) {
+        LOG_ERR("Unable to requeue video buf");
+        return 0;
+    }
+    return 0;
+}

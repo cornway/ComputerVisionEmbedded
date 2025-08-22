@@ -10,6 +10,10 @@
 #include <stdint.h>
 #include <zephyr/usb/usbd.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * The scope of this header is limited to use in USB samples together with the
  * new experimental USB device stack, you should not use it in your own
@@ -35,5 +39,9 @@ struct usbd_context *sample_usbd_init_device(usbd_msg_cb_t msg_cb);
  * such as additional descriptors.
  */
 struct usbd_context *sample_usbd_setup_device(usbd_msg_cb_t msg_cb);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* ZEPHYR_SAMPLES_SUBSYS_USB_COMMON_SAMPLE_USBD_H */

@@ -18,3 +18,33 @@ source "Kconfig.zephyr"
 rsource "Kconfig.sample_usbd"
 rsource "Kconfig.sample_msc"
 rsource "../Kconfig"
+
+
+menu "GrinReflex dk1 settings"
+
+config GRINREFLEX_JPEG_VIDEO
+	bool "Enable jpeg video input"
+	default y
+    depends on BOARD_GRINREFLEX_DK1
+
+config GRINREFLEX_JPEG_VIDEO_QUALITY
+    int "Set jpeg quality, lower value - higher quality"
+    default 63
+    depends on BOARD_GRINREFLEX_DK1
+
+config GRINREFLEX_VIDEO_WIDTH
+    int "Width of a video frame"
+    default 160
+
+config GRINREFLEX_VIDEO_HEIGHT
+    int "Height of a video frame"
+    default 120
+
+if GRINREFLEX_JPEG_VIDEO
+config LV_COLOR_16_SWAP
+    bool
+    default y
+endif
+
+
+endmenu
