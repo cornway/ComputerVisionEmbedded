@@ -81,7 +81,7 @@ void setup()
 	/* Set format */
 	fmt.width = CONFIG_GRINREFLEX_VIDEO_WIDTH;
 	fmt.height = CONFIG_GRINREFLEX_VIDEO_HEIGHT;
-#if CONFIG_GRINREFLEX_JPEG_VIDEO
+#if defined(CONFIG_GRINREFLEX_JPEG_VIDEO)
 	fmt.pixelformat = VIDEO_PIX_FMT_JPEG;
 #else
     fmt.pixelformat = VIDEO_PIX_FMT_RGB565;
@@ -126,11 +126,10 @@ void setup()
 	/* Size to allocate for each buffer */
 	bsize = fmt.pitch * fmt.height;
 
-#if CONFIG_GRINREFLEX_JPEG_VIDEO
-    if (0 == bsize && VIDEO_PIX_FMT_JPEG == fmt.pixelformat)
-    {
-        bsize = CONFIG_VIDEO_BUFFER_POOL_SZ_MAX / 2;
-    }
+#if defined(CONFIG_GRINREFLEX_JPEG_VIDEO)
+    bsize = CONFIG_VIDEO_BUFFER_POOL_SZ_MAX / 2;
+#else
+	bsize = fmt.pitch * fmt.height;
 #endif
 
 	/* Alloc video buffers and enqueue for capture */
@@ -157,7 +156,7 @@ void setup()
 		video_set_ctrl(video_dev, &ctrl);
 	}
 
-#if CONFIG_GRINREFLEX_JPEG_VIDEO
+#if defined(CONFIG_GRINREFLEX_JPEG_VIDEO)
     ctrl.id = VIDEO_CID_JPEG_COMPRESSION_QUALITY;
     ctrl.val = CONFIG_GRINREFLEX_JPEG_VIDEO_QUALITY;
     video_set_ctrl(video_dev, &ctrl);

@@ -9,6 +9,8 @@
 extern "C" {
 #endif
 
+#define NAND_PATH(_path) ("/NAND:" _path)
+
 int init();
 
 int loop();
