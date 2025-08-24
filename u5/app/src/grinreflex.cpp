@@ -44,16 +44,18 @@ FS_FSTAB_DECLARE_ENTRY(AUTOMOUNT_NODE);
 static struct usbd_context *sample_usbd;
 static lv_obj_t *vid_canvas;
 
-#define LCD_WIDTH 160
-#define LCD_HEIGHT 80
-
 #if defined(CONFIG_GRINREFLEX_JPEG_VIDEO)
 static uint8_t jpeg_frame_buffer[CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888)];
 static uint8_t rgb_frame_buffer[CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888)];
 #endif
 
+#if defined(CONFIG_OPENCV_LIB)
 #define GRAY_FRAME_WIDTH 80
-#define GRAY_FRAME_HEIGHT 120
+#define GRAY_FRAME_HEIGHT 80
+#else
+#define GRAY_FRAME_WIDTH 160
+#define GRAY_FRAME_HEIGHT 80
+#endif
 
 static uint8_t gray_frame_buffer[GRAY_FRAME_WIDTH * GRAY_FRAME_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_L8)];
 
@@ -63,9 +65,9 @@ static const struct device *video_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_camera));
 static const struct device *display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 const struct device *jpeg_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_jpeg));
 
-static lv_obj_t *RedGreenDot;
-
 #if defined(CONFIG_OPENCV_LIB)
+static lv_obj_t *RedGreenDot;
+static lv_obj_t *FaceRect;
 static cv::CascadeClassifier faceCascade;
 #endif
 
@@ -110,7 +112,7 @@ int init()
     }
 
 #if defined(CONFIG_OPENCV_LIB)
-    const char *faceCascadePath = NAND_PATH("/alt.xml");
+    const char *faceCascadePath = NAND_PATH("/cascface.xml");
 
     cv::setNumThreads(1);
 
@@ -146,6 +148,7 @@ int init()
 #endif
     screen = lv_img_create(lv_scr_act());
 
+#if defined(CONFIG_OPENCV_LIB)
     RedGreenDot = lv_obj_create(lv_scr_act());
     lv_obj_set_size(RedGreenDot, 30, 30);                    // dot size
     lv_obj_set_style_radius(RedGreenDot, LV_RADIUS_CIRCLE, 0); // make it round
@@ -155,6 +158,23 @@ int init()
     lv_obj_align(RedGreenDot, LV_ALIGN_LEFT_MID, 4, 0);      // 4px from left
     lv_obj_move_foreground(RedGreenDot);                     // keep it on top
 
+    FaceRect = lv_obj_create(lv_scr_act());
+    lv_obj_set_pos(FaceRect, 0, 0);
+    lv_obj_set_size(FaceRect, 1, 1);
+
+    // Unfilled, just a thick border
+    lv_obj_set_style_bg_opa(FaceRect, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_style_border_width(FaceRect, 4, LV_PART_MAIN);
+    lv_obj_set_style_border_opa(FaceRect, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_border_color(FaceRect, lv_palette_main(LV_PALETTE_GREEN), LV_PART_MAIN);
+    lv_obj_set_style_radius(FaceRect, 0, LV_PART_MAIN);      // 0 = sharp corners
+    lv_obj_set_style_pad_all(FaceRect, 0, LV_PART_MAIN);
+    lv_obj_set_style_outline_opa(FaceRect, LV_OPA_TRANSP, LV_PART_MAIN); // no focus outline
+    lv_obj_set_style_shadow_opa(FaceRect, LV_OPA_TRANSP, LV_PART_MAIN);  // no shadow
+    lv_obj_move_foreground(FaceRect);
+    lv_obj_add_flag(FaceRect, LV_OBJ_FLAG_HIDDEN);
+
+#endif
     return 0;
 }
 
@@ -200,8 +220,6 @@ int loop()
     dst.size = sizeof(gray_frame_buffer);
  
     Gfx::fit(vid_canvas, src, dst);
-
-    //video_img.data = lcd_frame_buffer;
 #else
     video_img.data = (uint8_t *)vbuf_ptr->buffer;
     lv_img_set_src(screen, &video_img);
@@ -218,18 +236,18 @@ int loop()
 
 #if defined(CONFIG_OPENCV_LIB)
     cv::Mat mat_gray(GRAY_FRAME_WIDTH, GRAY_FRAME_HEIGHT, CV_8UC1, gray_frame_buffer);
-    const cv::Size minSize(20, 20);
-    const cv::Size maxSize(mat_gray.cols, mat_gray.rows);
-    const double scaleFactor = 1.3;
-    const int minNeighbors = 3;
+    const cv::Size minSize(24, 24);
+    const cv::Size maxSize;
+    const double scaleFactor = 1.04;
+    const int minNeighbors = 1;
     const int flags = 0;
 
     std::vector<cv::Rect> faces;
 
     uint32_t start_ms = k_uptime_get_32();
 
-    //faceCascade.detectMultiScale(mat_gray, faces, scaleFactor, minNeighbors,
-    //                            flags, minSize, maxSize);
+    faceCascade.detectMultiScale(mat_gray, faces, scaleFactor, minNeighbors,
+                                flags, minSize, maxSize);
 
     uint32_t end_ms = k_uptime_get_32();
     uint32_t elapsed = end_ms - start_ms;
@@ -241,26 +259,19 @@ int loop()
                                 : lv_palette_main(LV_PALETTE_RED);
     lv_obj_set_style_bg_color(RedGreenDot, c, 0);
 
+    if (faces.size()) lv_obj_remove_flag(FaceRect, LV_OBJ_FLAG_HIDDEN);
+    else         lv_obj_add_flag(FaceRect, LV_OBJ_FLAG_HIDDEN);
+
     for (const auto &r : faces) {
         cv::rectangle(mat_gray, r, cv::Scalar(255, 255, 255), 2, cv::LINE_8);
         std::cout << "detectMultiScale : " << elapsed << std::endl;
-        printf("faces = %d, %d %d\n", faces.size(), mat_gray.cols, mat_gray.rows);
+        printf("faces = %d, %d %d\n", faces.size(), r.x, r.y);
+
+        lv_obj_align_to(FaceRect, vid_canvas, LV_ALIGN_TOP_LEFT, r.x, r.y);
+        //lv_obj_set_pos(FaceRect, r.x, r.y);
+        lv_obj_set_size(FaceRect, r.width, r.height);
     }
 
-#if 0
-    src = dst;
-
-    dst.buf = rgb_frame_buffer;
-    dst.width = LCD_WIDTH;
-    dst.height = LCD_HEIGHT;
-    dst.stride = LCD_WIDTH * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_NATIVE);
-    dst.cf = LV_COLOR_FORMAT_NATIVE;
-    dst.size = sizeof(rgb_frame_buffer);
- 
-    Gfx::fit(vid_canvas, src, dst);
-
-    lv_task_handler();
-#endif
 #endif
 
     return 0;
