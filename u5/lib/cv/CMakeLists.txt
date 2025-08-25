@@ -163,11 +163,11 @@ opencv_add_lib_3p(liblibjpeg-turbo)
 add_library(opencv_lib INTERFACE)
 target_link_libraries(opencv_lib INTERFACE
 libopencv_imgcodecs
-libopencv_imgproc
-libopencv_calib3d
+libopencv_objdetect
 libopencv_calib3d
 libopencv_flann
-libopencv_objdetect
+libopencv_features2d
+libopencv_imgproc
 libopencv_core
 
 liblibpng

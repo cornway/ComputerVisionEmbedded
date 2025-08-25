@@ -3,9 +3,8 @@
 
 menu "Custom libraries"
 
+rsource "cv/Kconfig"
 rsource "tflite/Kconfig"
-
-config OPENCV_LIB
-	bool "Support for opencv custom library"
+rsource "quirc/Kconfig"
 
 endmenu
