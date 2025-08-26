@@ -46,6 +46,14 @@ LOG_MODULE_REGISTER(grinreflex_app);
 #include "quirc.h"
 #endif
 
+#if defined(CONFIG_TFLITE_LIB)
+#include "app/lib/tflm.h"
+#endif
+
+#if defined(CONFIG_TFLITE_LIB) && defined(CONFIG_OPENCV_LIB)
+#error "Can't use both CONFIG_TFLITE_LIB and CONFIG_OPENCV_LIB at the same time"
+#endif
+
 #define AUTOMOUNT_NODE DT_NODELABEL(ffs2)
 FS_FSTAB_DECLARE_ENTRY(AUTOMOUNT_NODE);
 
@@ -56,16 +64,6 @@ static lv_obj_t *vid_canvas;
 static uint8_t jpeg_frame_buffer[CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888)];
 static uint8_t rgb_frame_buffer[CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888)];
 #endif
-
-#if defined(CONFIG_OPENCV_LIB)
-#define GRAY_FRAME_WIDTH 80
-#define GRAY_FRAME_HEIGHT 80
-#else
-#define GRAY_FRAME_WIDTH 160
-#define GRAY_FRAME_HEIGHT 80
-#endif
-
-static uint8_t gray_frame_buffer[GRAY_FRAME_WIDTH * GRAY_FRAME_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_L8)];
 
 USBD_DEFINE_MSC_LUN(flash, "NAND", "Zephyr", "FlashDisk", "0.00");
 
@@ -81,6 +79,18 @@ static cv::QRCodeDetector qrCodeDetector;
 
 #define OPECV_SHOWCASE OCV_SC_FACE_DETECT
 
+#endif /* defined(CONFIG_OPENCV_LIB) */
+
+#define GRAY_FRAME_WIDTH 120
+#define GRAY_FRAME_HEIGHT 120
+
+static uint8_t gray_frame_buffer[GRAY_FRAME_WIDTH * GRAY_FRAME_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_L8)];
+
+#if defined(CONFIG_TFLITE_LIB)
+#define TFLM_INFERENCE_WIDTH 96
+#define TFLM_INFERENCE_HEIGHT 96
+
+static uint8_t tflm_rgb_frame_buffer[TFLM_INFERENCE_WIDTH * TFLM_INFERENCE_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888)];
 #endif
 
 static int enable_usb_device_next(void) {
@@ -122,6 +132,10 @@ int init()
 		LOG_ERR("Failed to enable USB");
         return -ENODEV;
     }
+
+#if defined(CONFIG_TFLITE_LIB)
+    tflm_init();
+#endif
 
 #if defined(CONFIG_OPENCV_LIB)
 
@@ -209,6 +223,20 @@ int loop()
 
     jpeg_color_convert_helper(jpeg_dev, &jpeg_prop, jpeg_frame_buffer, rgb_frame_buffer);
 
+#else
+    video_img.data = (uint8_t *)vbuf_ptr->buffer;
+    lv_img_set_src(screen, &video_img);
+	lv_obj_align(screen, LV_ALIGN_BOTTOM_LEFT, 0, 0);
+    lv_task_handler();
+#endif
+
+    err = video_enqueue(video_dev, vbuf_ptr);
+    if (err) {
+        LOG_ERR("Unable to requeue video buf");
+        return 0;
+    }
+
+#if !defined(CONFIG_OPENCV_LIB) && !defined(CONFIG_TFLITE_LIB)
     Gfx::GfxBuffer src{};
     Gfx::GfxBuffer dst{};
 
@@ -228,19 +256,54 @@ int loop()
 
     Gfx::fit(vid_canvas, src, dst);
     lv_task_handler();
-#else
-    video_img.data = (uint8_t *)vbuf_ptr->buffer;
-    lv_img_set_src(screen, &video_img);
-	lv_obj_align(screen, LV_ALIGN_BOTTOM_LEFT, 0, 0);
-    lv_task_handler();
 #endif
-    err = video_enqueue(video_dev, vbuf_ptr);
-    if (err) {
-        LOG_ERR("Unable to requeue video buf");
-        return 0;
-    }
+
+#if defined(CONFIG_TFLITE_LIB)
+
+    Gfx::GfxBuffer src{};
+    Gfx::GfxBuffer dst{};
+
+    src.buf = rgb_frame_buffer;
+    src.width = CONFIG_GRINREFLEX_VIDEO_WIDTH;
+    src.height = CONFIG_GRINREFLEX_VIDEO_HEIGHT;
+    src.stride = CONFIG_GRINREFLEX_VIDEO_WIDTH * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888);
+    src.cf = LV_COLOR_FORMAT_RGB888;
+    src.size = sizeof(rgb_frame_buffer);
+
+    dst.buf = tflm_rgb_frame_buffer;
+    dst.width = TFLM_INFERENCE_WIDTH;
+    dst.height = TFLM_INFERENCE_HEIGHT;
+    dst.stride = TFLM_INFERENCE_WIDTH * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888);
+    dst.cf = LV_COLOR_FORMAT_RGB888;
+    dst.size = sizeof(tflm_rgb_frame_buffer);
+
+    Gfx::fit(vid_canvas, src, dst);
+    lv_task_handler();
+
+    inference_task(tflm_rgb_frame_buffer);
+#endif /* defined(CONFIG_TFLITE_LIB) */
 
 #if defined(CONFIG_OPENCV_LIB)
+    Gfx::GfxBuffer src{};
+    Gfx::GfxBuffer dst{};
+
+    src.buf = rgb_frame_buffer;
+    src.width = CONFIG_GRINREFLEX_VIDEO_WIDTH;
+    src.height = CONFIG_GRINREFLEX_VIDEO_HEIGHT;
+    src.stride = CONFIG_GRINREFLEX_VIDEO_WIDTH * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888);
+    src.cf = LV_COLOR_FORMAT_RGB888;
+    src.size = sizeof(rgb_frame_buffer);
+
+    dst.buf = gray_frame_buffer;
+    dst.width = GRAY_FRAME_WIDTH;
+    dst.height = GRAY_FRAME_HEIGHT;
+    dst.stride = GRAY_FRAME_WIDTH * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_L8);
+    dst.cf = LV_COLOR_FORMAT_L8;
+    dst.size = sizeof(gray_frame_buffer);
+
+    Gfx::fit(vid_canvas, src, dst);
+    lv_task_handler();
+
 #if (OPECV_SHOWCASE == OCV_SC_FACE_DETECT)
     cv::Mat mat_gray(GRAY_FRAME_WIDTH, GRAY_FRAME_HEIGHT, CV_8UC1, gray_frame_buffer);
 

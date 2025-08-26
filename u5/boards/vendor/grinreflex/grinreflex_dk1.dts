@@ -460,3 +460,7 @@ zephyr_camera_dvp: &dcmi {
 	pinctrl-0 = <&rcc_mco_pa8>;
 	pinctrl-names = "default";
 };
+
+&dcmi {
+	status = "okay";
+};

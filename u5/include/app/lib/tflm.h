@@ -36,16 +36,8 @@
 #ifndef MTCNN_H_
 #define MTCNN_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 void tflm_init(void);
 void inference_task(void *frame);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* MTCNN_H_ */
 

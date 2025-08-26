@@ -1,5 +1,8 @@
 
 
+
+#include <zephyr/kernel.h>
+
 #include <tensorflow/lite/micro/micro_interpreter.h>
 #include <tensorflow/lite/micro/micro_mutable_op_resolver.h>
 #include <tensorflow/lite/schema/schema_generated.h>
@@ -22,7 +25,7 @@ static tflite::MicroInterpreter * pnet_3_interpreter = nullptr;
 static tflite::MicroInterpreter * rnet_interpreter = nullptr;
 static tflite::MicroInterpreter * onet_interpreter = nullptr;
 
-extern "C" void tflm_init(void) {
+void tflm_init(void) {
 //	tflite::ErrorReporter* error_reporter = nullptr;
 //  tflite::MicroErrorReporter micro_error_reporter;
 //  error_reporter = &micro_error_reporter;
@@ -142,7 +145,7 @@ extern "C" void tflm_init(void) {
   }
 }
 
-extern "C" void inference_task(void *frame) {
+void inference_task(void *frame) {
 	/* Convert to RGB888 and return frame buffer*/
     uint8_t * rgb888_image = (uint8_t *)frame;
 
@@ -204,7 +207,7 @@ extern "C" void inference_task(void *frame) {
         //uint8_t * cnv_buf = NULL;
 
         /* Draw bboxes and save the file */
-        draw_rectangle_rgb888(rgb888_image, onet_bboxes, IMG_W);
+        //draw_rectangle_rgb888(rgb888_image, onet_bboxes, IMG_W);
         //fmt2jpg(rgb888_image, IMG_W * IMG_H, IMG_W, IMG_H, PIXFORMAT_RGB888, 80, &cnv_buf, &cnv_buf_len);
         //fwrite(cnv_buf, cnv_buf_len, 1, f);
 
@@ -220,5 +223,4 @@ extern "C" void inference_task(void *frame) {
     free(rnet_bboxes);
     free(onet_bboxes->bbox);
     free(onet_bboxes);
-    free(rgb888_image);
 }

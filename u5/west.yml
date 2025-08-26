@@ -26,9 +26,5 @@ manifest:
           - hal_nordic # required by the custom_plank board (Nordic based)
           - hal_stm32  # required by the nucleo_f302r8 board (STM32 based)
           - tflite-micro
-    - name: fatfs
-      revision: 16245c7c41d2b79e74984f49b5202551786b8a9b
-      path: modules/fs/fatfs
-    - name: lvgl
-      revision: b03edc8e6282a963cd312cd0b409eb5ce263ea75
-      path: modules/lib/gui/lvgl
+          - fatfs
+          - lvgl
