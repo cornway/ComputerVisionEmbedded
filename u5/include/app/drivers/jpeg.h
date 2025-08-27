@@ -13,6 +13,8 @@ struct jpeg_out_prop {
   uint32_t quality;
 };
 
+typedef void (*jpeg_cplt_callback_t)(const struct device *parent_dev);
+
 __subsystem struct jpeg_hw_driver_api {
   int (*decode)(const struct device *dev, const uint8_t *src, size_t src_size,
                 uint8_t *dst);
@@ -20,6 +22,7 @@ __subsystem struct jpeg_hw_driver_api {
               struct jpeg_out_prop *prop);
   int (*cc_helper)(const struct device *dev, struct jpeg_out_prop *prop,
                    const uint8_t *src, uint8_t *dst);
+  int (*register_cplt_callback)( const struct device *dev, const struct device *parent_dev, jpeg_cplt_callback_t callback );
 };
 
 static inline int jpeg_hw_decode(const struct device *dev, const uint8_t *src,
@@ -53,6 +56,14 @@ static inline int jpeg_hw_decode_blocking(const struct device *dev,
     return ret;
   }
   ret = jpeg_hw_poll(dev, 0, prop);
+}
+
+static inline int jpeg_hw_register_cplt_callback(const struct device *dev,
+                                          const struct device *parent_dev,
+                                          jpeg_cplt_callback_t callback) {
+  __ASSERT_NO_MSG(DEVICE_API_IS(jpeg_hw, dev));
+
+  return DEVICE_API_GET(jpeg_hw, dev)->register_cplt_callback(dev, parent_dev, callback);
 }
 
 #endif /*APP_DRIVERS_STM32_JPEG_HW_H_*/

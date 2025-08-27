@@ -462,5 +462,5 @@ zephyr_camera_dvp: &dcmi {
 };
 
 &dcmi {
-	status = "okay";
+	jpeg-dev = <&jpeg0>;
 };

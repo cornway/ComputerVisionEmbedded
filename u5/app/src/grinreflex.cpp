@@ -61,7 +61,7 @@ static struct usbd_context *sample_usbd;
 static lv_obj_t *vid_canvas;
 
 #if defined(CONFIG_GRINREFLEX_JPEG_VIDEO)
-static uint8_t jpeg_frame_buffer[CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888)];
+//static uint8_t jpeg_frame_buffer[CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888)];
 static uint8_t rgb_frame_buffer[CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888)];
 #endif
 
@@ -214,14 +214,14 @@ int loop()
     }
 
 #if defined(CONFIG_GRINREFLEX_JPEG_VIDEO)
-    jpeg_hw_decode(jpeg_dev, (uint8_t *)vbuf_ptr->buffer, vbuf_ptr->bytesused, jpeg_frame_buffer);
+    //jpeg_hw_decode(jpeg_dev, (uint8_t *)vbuf_ptr->buffer, vbuf_ptr->bytesused, jpeg_frame_buffer);
 
     jpeg_hw_poll(jpeg_dev, 0, &jpeg_prop);
 
     //printf("JPEG done w = %d, h = %d, color = %d chroma = %d\n", jpeg_prop.width,
     //        jpeg_prop.height, jpeg_prop.color_space, jpeg_prop.chroma);
 
-    jpeg_color_convert_helper(jpeg_dev, &jpeg_prop, jpeg_frame_buffer, rgb_frame_buffer);
+    jpeg_color_convert_helper(jpeg_dev, &jpeg_prop, vbuf_ptr->buffer, rgb_frame_buffer);
 
 #else
     video_img.data = (uint8_t *)vbuf_ptr->buffer;
@@ -229,12 +229,6 @@ int loop()
 	lv_obj_align(screen, LV_ALIGN_BOTTOM_LEFT, 0, 0);
     lv_task_handler();
 #endif
-
-    err = video_enqueue(video_dev, vbuf_ptr);
-    if (err) {
-        LOG_ERR("Unable to requeue video buf");
-        return 0;
-    }
 
 #if !defined(CONFIG_OPENCV_LIB) && !defined(CONFIG_TFLITE_LIB)
     Gfx::GfxBuffer src{};
@@ -245,7 +239,7 @@ int loop()
     src.height = CONFIG_GRINREFLEX_VIDEO_HEIGHT;
     src.stride = CONFIG_GRINREFLEX_VIDEO_WIDTH * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888);
     src.cf = LV_COLOR_FORMAT_RGB888;
-    src.size = sizeof(rgb_frame_buffer);
+    src.size = 0;//CONFIG_GRINREFLEX_VIDEO_HEIGHT * CONFIG_GRINREFLEX_VIDEO_WIDTH * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888);
 
     dst.buf = gray_frame_buffer;
     dst.width = GRAY_FRAME_WIDTH;
@@ -257,6 +251,12 @@ int loop()
     Gfx::fit(vid_canvas, src, dst);
     lv_task_handler();
 #endif
+
+    err = video_enqueue(video_dev, vbuf_ptr);
+    if (err) {
+        LOG_ERR("Unable to requeue video buf");
+        return 0;
+    }
 
 #if defined(CONFIG_TFLITE_LIB)
 

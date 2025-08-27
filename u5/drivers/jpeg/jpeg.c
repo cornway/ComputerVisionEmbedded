@@ -37,6 +37,8 @@ struct jpeg_in_prop {
 struct jpeg_hw_data {
   struct stream tx;
   struct stream rx;
+  const struct device *parent_dev;
+  jpeg_cplt_callback_t cplt_callback;
   DMA_HandleTypeDef hdma_tx, hdma_rx;
   JPEG_HandleTypeDef hjpeg;
 
@@ -119,7 +121,9 @@ void HAL_JPEG_DecodeCpltCallback(JPEG_HandleTypeDef *hjpeg) {
   struct jpeg_hw_data *data = CONTAINER_OF(hjpeg, struct jpeg_hw_data, hjpeg);
 
   atomic_set(&data->data_ready, 1);
-  // LOG_INF("HAL_JPEG_DecodeCpltCallback");
+  if (data->parent_dev && data->cplt_callback) {
+    data->cplt_callback(data->parent_dev);
+  }
 }
 
 static void dma_callback(const struct device *dma_dev, void *arg,
@@ -374,7 +378,7 @@ static int _jpeg_color_convert_helper(const struct device *dev,
   }
 
   uint32_t NrBlocks =
-      convert_function(src, dst, 0, inSize, &ConvertedDataCount);
+      convert_function((uint8_t *)src, dst, 0, inSize, &ConvertedDataCount);
 
   //LOG_INF("Decoded image : NrBlocks = %d, size = %d", NrBlocks,
   //        ConvertedDataCount);
@@ -382,10 +386,23 @@ static int _jpeg_color_convert_helper(const struct device *dev,
   return NrBlocks ? NrBlocks : -EINVAL;
 }
 
+static int _jpeg_register_cplt_callback(const struct device *dev,
+                                      const struct device *parent_dev,
+                                      jpeg_cplt_callback_t callback)
+{
+    struct jpeg_hw_data *dev_data = dev->data;
+    /* Might be DCMI or any other source of jpeg frame */
+    dev_data->parent_dev = parent_dev;
+    dev_data->cplt_callback = callback;
+
+    return 0;
+}
+
 static DEVICE_API(jpeg_hw, jpeg_hw_driver_api) = {
     .decode = _jpeg_hw_decode,
     .poll = _jpeg_hw_poll,
     .cc_helper = _jpeg_color_convert_helper,
+    .register_cplt_callback = _jpeg_register_cplt_callback
 };
 
 #define JPEG_DMA_CHANNEL_INIT(stream, index, dir, src_dev, dest_dev)           \
