@@ -29,24 +29,35 @@
 #define JPEG_ARGB8888 0 /* ARGB8888 Color Format */
 #define JPEG_RGB888 1   /* RGB888 Color Format   */
 #define JPEG_RGB565 2   /* RGB565 Color Format   */
+#define JPEG_GRAY 3   /* GRAY (L8) Color Format   */
 
 /*
  * Define USE_JPEG_DECODER
  */
 
+#if defined(CONFIG_STM32_JPEG_USE_DECODER)
 #define USE_JPEG_DECODER 1 /* 1 or 0 */
+#else
+#define USE_JPEG_DECODER 0
+#endif
+
 /*
  * Define USE_JPEG_ENCODER
  */
 
+#if defined(CONFIG_STM32_JPEG_USE_ENCODER)
+#define USE_JPEG_ENCODER                                                       \
+  1 /* 1 or 0 ********* Value different from default value : 1 ********** */
+#else
 #define USE_JPEG_ENCODER                                                       \
   0 /* 1 or 0 ********* Value different from default value : 1 ********** */
+#endif
 
 /*
  * Define JPEG_RGB_FORMAT
  */
 #define JPEG_RGB_FORMAT                                                        \
-  JPEG_RGB888 /* JPEG_ARGB8888, JPEG_RGB888, JPEG_RGB565 ********* Value       \
+  CONFIG_STM32_JPEG_RGB_FORMAT /* JPEG_ARGB8888, JPEG_RGB888, JPEG_RGB565 ********* Value       \
                    different from default value : 0 ********** */
 
 /*

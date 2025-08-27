@@ -61,8 +61,28 @@ static struct usbd_context *sample_usbd;
 static lv_obj_t *vid_canvas;
 
 #if defined(CONFIG_GRINREFLEX_JPEG_VIDEO)
+
+#if defined(CONFIG_STM32_JPEG_RGB_FORMAT)
+#if CONFIG_STM32_JPEG_RGB_FORMAT == 0
+#define JPEG_COLOR_FORMAT LV_COLOR_FORMAT_ARGB8888
+#elif CONFIG_STM32_JPEG_RGB_FORMAT == 1
+#define JPEG_COLOR_FORMAT LV_COLOR_FORMAT_RGB888
+#elif CONFIG_STM32_JPEG_RGB_FORMAT == 2
+#define JPEG_COLOR_FORMAT LV_COLOR_FORMAT_RGB565
+#elif CONFIG_STM32_JPEG_RGB_FORMAT == 3
+#define JPEG_COLOR_FORMAT LV_COLOR_FORMAT_L8
+#else
+#error "CONFIG_STM32_JPEG_RGB_FORMAT is not supported"
+#endif
+
+#else
+#define JPEG_COLOR_FORMAT LV_COLOR_FORMAT_RGB888
+#endif /* defined(CONFIG_STM32_JPEG_RGB_FORMAT) */
+
+
 //static uint8_t jpeg_frame_buffer[CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888)];
-static uint8_t rgb_frame_buffer[CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888)];
+static uint8_t rgb_frame_buffer[CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(JPEG_COLOR_FORMAT)];
+
 #endif
 
 USBD_DEFINE_MSC_LUN(flash, "NAND", "Zephyr", "FlashDisk", "0.00");
@@ -161,8 +181,8 @@ int init()
     video_img.header.w = CONFIG_GRINREFLEX_VIDEO_WIDTH;
 	video_img.header.h = CONFIG_GRINREFLEX_VIDEO_HEIGHT;
 #if defined(CONFIG_GRINREFLEX_JPEG_VIDEO)
-	video_img.data_size = CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888);
-	video_img.header.cf = LV_COLOR_FORMAT_RGB888;
+	video_img.data_size = CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(JPEG_COLOR_FORMAT);
+	video_img.header.cf = JPEG_COLOR_FORMAT;
 #else
 	video_img.data_size = CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_NATIVE);
 	video_img.header.cf = LV_COLOR_FORMAT_NATIVE;
@@ -237,9 +257,9 @@ int loop()
     src.buf = rgb_frame_buffer;
     src.width = CONFIG_GRINREFLEX_VIDEO_WIDTH;
     src.height = CONFIG_GRINREFLEX_VIDEO_HEIGHT;
-    src.stride = CONFIG_GRINREFLEX_VIDEO_WIDTH * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888);
-    src.cf = LV_COLOR_FORMAT_RGB888;
-    src.size = 0;//CONFIG_GRINREFLEX_VIDEO_HEIGHT * CONFIG_GRINREFLEX_VIDEO_WIDTH * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888);
+    src.stride = CONFIG_GRINREFLEX_VIDEO_WIDTH * LV_COLOR_FORMAT_GET_SIZE(JPEG_COLOR_FORMAT);
+    src.cf = JPEG_COLOR_FORMAT;
+    src.size = CONFIG_GRINREFLEX_VIDEO_HEIGHT * CONFIG_GRINREFLEX_VIDEO_WIDTH * LV_COLOR_FORMAT_GET_SIZE(JPEG_COLOR_FORMAT);
 
     dst.buf = gray_frame_buffer;
     dst.width = GRAY_FRAME_WIDTH;
@@ -250,13 +270,13 @@ int loop()
 
     Gfx::fit(vid_canvas, src, dst);
     lv_task_handler();
-#endif
 
     err = video_enqueue(video_dev, vbuf_ptr);
     if (err) {
         LOG_ERR("Unable to requeue video buf");
         return 0;
     }
+#endif
 
 #if defined(CONFIG_TFLITE_LIB)
 
@@ -266,8 +286,8 @@ int loop()
     src.buf = rgb_frame_buffer;
     src.width = CONFIG_GRINREFLEX_VIDEO_WIDTH;
     src.height = CONFIG_GRINREFLEX_VIDEO_HEIGHT;
-    src.stride = CONFIG_GRINREFLEX_VIDEO_WIDTH * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888);
-    src.cf = LV_COLOR_FORMAT_RGB888;
+    src.stride = CONFIG_GRINREFLEX_VIDEO_WIDTH * LV_COLOR_FORMAT_GET_SIZE(JPEG_COLOR_FORMAT);
+    src.cf = JPEG_COLOR_FORMAT;
     src.size = sizeof(rgb_frame_buffer);
 
     dst.buf = tflm_rgb_frame_buffer;
@@ -280,6 +300,12 @@ int loop()
     Gfx::fit(vid_canvas, src, dst);
     lv_task_handler();
 
+    err = video_enqueue(video_dev, vbuf_ptr);
+    if (err) {
+        LOG_ERR("Unable to requeue video buf");
+        return 0;
+    }
+
     inference_task(tflm_rgb_frame_buffer);
 #endif /* defined(CONFIG_TFLITE_LIB) */
 
@@ -290,8 +316,8 @@ int loop()
     src.buf = rgb_frame_buffer;
     src.width = CONFIG_GRINREFLEX_VIDEO_WIDTH;
     src.height = CONFIG_GRINREFLEX_VIDEO_HEIGHT;
-    src.stride = CONFIG_GRINREFLEX_VIDEO_WIDTH * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_RGB888);
-    src.cf = LV_COLOR_FORMAT_RGB888;
+    src.stride = CONFIG_GRINREFLEX_VIDEO_WIDTH * LV_COLOR_FORMAT_GET_SIZE(JPEG_COLOR_FORMAT);
+    src.cf = JPEG_COLOR_FORMAT;
     src.size = sizeof(rgb_frame_buffer);
 
     dst.buf = gray_frame_buffer;
@@ -303,6 +329,12 @@ int loop()
 
     Gfx::fit(vid_canvas, src, dst);
     lv_task_handler();
+
+    err = video_enqueue(video_dev, vbuf_ptr);
+    if (err) {
+        LOG_ERR("Unable to requeue video buf");
+        return 0;
+    }
 
 #if (OPECV_SHOWCASE == OCV_SC_FACE_DETECT)
     cv::Mat mat_gray(GRAY_FRAME_WIDTH, GRAY_FRAME_HEIGHT, CV_8UC1, gray_frame_buffer);

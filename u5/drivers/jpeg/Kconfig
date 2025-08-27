@@ -17,8 +17,26 @@ config STM32_JPEG
 	  This option enables STM32 JPEG HW decoder.
 
 config STM32_JPEG_LOG_LEVEL
-    int "STM32_JPEG_LOG_LEVEL"
+  int "STM32_JPEG_LOG_LEVEL"
     default 3
+
+config STM32_JPEG_RGB_FORMAT
+  int "STM32_JPEG_RGB_FORMAT"
+    default 1
+
+  help
+    0: JPEG_ARGB8888
+    1: JPEG_RGB888
+    2: JPEG_RGB565
+    3: JPEG_GRAY
+
+config STM32_JPEG_USE_DECODER
+  bool "STM32_JPEG_USE_DECODER"
+    default y
+
+config STM32_JPEG_USE_ENCODER
+  bool "STM32_JPEG_USE_ENCODER"
+    default n
 
 endmenu
 

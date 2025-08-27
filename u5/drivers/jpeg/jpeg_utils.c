@@ -209,6 +209,9 @@ typedef struct __JPEG_MCU_RGB_ConvertorTypeDef {
   0xF800 /* Mask of Blue component in RGB565 Format      */
 #endif   /* JPEG_SWAP_RB */
 
+#elif (JPEG_RGB_FORMAT == JPEG_GRAY)
+#define JPEG_BYTES_PER_PIXEL                                                   \
+  1 /* Number of bytes in a pixel                   */
 #else
 
 #error "unknown JPEG_RGB_FORMAT "
@@ -2063,6 +2066,26 @@ JPEG_MCU_YCbCr420_ARGB_ConvertBlocks(uint8_t *pInBuffer, uint8_t *pOutBuffer,
                 ((CLAMP(ycomp + c_red) >> 3) << JPEG_RED_OFFSET) |
                 ((CLAMP(ycomp + c_green) >> 2) << JPEG_GREEN_OFFSET) |
                 ((CLAMP(ycomp + c_blue) >> 3) << JPEG_BLUE_OFFSET);
+
+#elif (JPEG_RGB_FORMAT == JPEG_GRAY)
+            ycomp = (int32_t)(*(pLum + j));
+
+            pOutAddr[0] = ycomp;
+
+            /**********/
+            ycomp = (int32_t)(*(pLum + j + 1));
+
+            pOutAddr[1] = ycomp;
+
+            /**********/
+            ycomp = (int32_t)(*(pLum + j + 8));
+
+            pOutAddr2[0] = ycomp;
+
+            /**********/
+            ycomp = (int32_t)(*(pLum + j + 8 + 1));
+
+            pOutAddr2[1] = ycomp;
 #endif /* JPEG_RGB_FORMAT */
 
             pOutAddr += JPEG_BYTES_PER_PIXEL * 2;
@@ -2189,7 +2212,16 @@ JPEG_MCU_YCbCr422_ARGB_ConvertBlocks(uint8_t *pInBuffer, uint8_t *pOutBuffer,
                 ((CLAMP(ycomp + c_green) >> 2) << JPEG_GREEN_OFFSET) |
                 ((CLAMP(ycomp + c_blue) >> 3) << JPEG_BLUE_OFFSET);
 
-#endif /* JPEG_RGB_FORMAT*/
+#elif (JPEG_RGB_FORMAT == JPEG_GRAY)
+            ycomp = (int32_t)(*(pLum + j));
+
+            pOutAddr[0] = ycomp;
+
+            /**********/
+            ycomp = (int32_t)(*(pLum + j + 1));
+
+            pOutAddr[1] = ycomp;
+#endif /* JPEG_RGB_FORMAT */
 
             pOutAddr += JPEG_BYTES_PER_PIXEL * 2;
 
@@ -2293,6 +2325,10 @@ JPEG_MCU_YCbCr444_ARGB_ConvertBlocks(uint8_t *pInBuffer, uint8_t *pOutBuffer,
               ((CLAMP(ycomp + c_green) >> 2) << JPEG_GREEN_OFFSET) |
               ((CLAMP(ycomp + c_blue) >> 3) << JPEG_BLUE_OFFSET);
 
+#elif (JPEG_RGB_FORMAT == JPEG_GRAY)
+            ycomp = (int32_t)(*(pLum + j));
+
+            pOutAddr[0] = ycomp;
 #endif /* JPEG_RGB_FORMAT */
 
           pOutAddr += JPEG_BYTES_PER_PIXEL;
@@ -2369,6 +2405,8 @@ static uint32_t JPEG_MCU_Gray_ARGB_ConvertBlocks(uint8_t *pInBuffer,
           *(__IO uint16_t *)pOutAddr =
               ((ySample >> 3) << 11) | ((ySample >> 2) << 5) | (ySample >> 3);
 
+#elif (JPEG_RGB_FORMAT == JPEG_GRAY)
+            pOutAddr[0] = ySample;
 #endif /* JPEG_RGB_FORMAT */
 
           pOutAddr += JPEG_BYTES_PER_PIXEL;
