@@ -1,27 +1,27 @@
-git submodule init --update
+## This is a draft playground repository to check opencv capabilities with zephyr rtos in embedded world
+Currently it is only tested with stm32u5xx boards, as it takes ~3mb of rom/flash
 
-west init -l u5
-west update
+For a fresh start
+* Clone this repo
+* `git submodule init --update`
+* `west init -l u5`
+* `west update`
+* `west build -b stm32u5g9j_dk2 u5/app/ -- -DBOARD_ROOT=./../` (builds for stm32u5g9j_dk2 board, you can google what that board is)
+* `west flash`
 
-west build -b stm32u5g9j_dk2 u5/app/
-west flash
+### Important note: since stm32u5g9j_dk2 doesn't have camera sensor, you need to find out your own way how to transfer images to the board; I used uart for that purpose
 
-###########################################
+## To enable OpenCV library and example code
+* in `u5/app/prj.conf` : CONFIG_OPENCV_LIB=y
 
-# To switch on tflite lib :
-# in u5/app/prj.conf
-# CONFIG_TFLITE_LIB=y
-# That also enables example
+Note: there are maybe more dependencies, so watch out
 
-###########################################
+## Also possible to use tflite micro
+* in `u5/app/prj.conf` : CONFIG_TFLITE_LIB=y
 
-# Opencv library
-# in u5/app/prj.conf :
-# CONFIG_OPENCV_LIB=y
+### Planning to add support for stm32n6 boards
+### there are more custom boards based on stm32u5xx family, PCB repository is coming
+If you are willing to roll out your own board, please don't hesitate to contact me
 
-# Note: for opencv exceptions and rtti must be enabled
 
-###########################################
-
-west build -b stm32u5g9j_dk2 u5/app/
-west flash
+### Note: this project is in it's very very early phase
