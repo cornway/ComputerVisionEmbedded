@@ -1,3 +1,6 @@
 [submodule "u5/lib/cv/opencv"]
 	path = u5/lib/cv/opencv
-	url = git@github.com:opencv/opencv.git
+	url = git@github.com:cornway/opencv.git
+[submodule "u5/lib/quirc/quirc"]
+	path = u5/lib/quirc/quirc
+	url = git@github.com:dlbeer/quirc.git
