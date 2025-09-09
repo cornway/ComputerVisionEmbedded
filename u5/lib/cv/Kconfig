@@ -1,0 +1,2 @@
+config OPENCV_LIB
+	bool "Support for opencv custom library"

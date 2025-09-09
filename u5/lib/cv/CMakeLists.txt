@@ -79,6 +79,7 @@ add_custom_command(
         -DBUILD_opencv_imgproc=ON
         -DBUILD_opencv_objdetect=ON
         -DBUILD_opencv_gapi=OFF
+        -DBUILD_opencv_apps=OFF
         -DBUILD_PACKAGE=OFF
         -DBUILD_PERF_TESTS=OFF
         -DBUILD_TESTS=OFF

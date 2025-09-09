@@ -17,8 +17,6 @@ source "subsys/logging/Kconfig.template.log_config"
 source "Kconfig.zephyr"
 rsource "Kconfig.sample_usbd"
 rsource "Kconfig.sample_msc"
-rsource "../Kconfig"
-
 
 menu "GrinReflex dk1 settings"
 

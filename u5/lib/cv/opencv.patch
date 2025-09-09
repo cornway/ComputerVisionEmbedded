@@ -1,5 +1,5 @@
 diff --git a/3rdparty/openjpeg/CMakeLists.txt b/3rdparty/openjpeg/CMakeLists.txt
-index 188381f1e2..e273c9d337 100644
+index 4e9e260e96..4a49db9252 100644
 --- a/3rdparty/openjpeg/CMakeLists.txt
 +++ b/3rdparty/openjpeg/CMakeLists.txt
 @@ -142,6 +142,7 @@ CHECK_INCLUDE_FILE("sys/types.h"    HAVE_SYS_TYPES_H)
@@ -53,7 +53,7 @@ index 262d9196a2..cae7b43998 100644
  class HomographyEstimatorImpl : public HomographyEstimator {
  private:
 diff --git a/modules/calib3d/src/usac/utils.cpp b/modules/calib3d/src/usac/utils.cpp
-index 204b31cf92..3a29980c63 100644
+index 8d95fb9c33..85787515c0 100644
 --- a/modules/calib3d/src/usac/utils.cpp
 +++ b/modules/calib3d/src/usac/utils.cpp
 @@ -7,6 +7,11 @@
@@ -69,10 +69,10 @@ index 204b31cf92..3a29980c63 100644
  /*
  SolvePoly is used to find only real roots of N-degree polynomial using Sturm sequence.
 diff --git a/modules/core/src/parallel.cpp b/modules/core/src/parallel.cpp
-index 4525928b94..e7b0bfc177 100644
+index 09c86e94d2..7285dc6803 100644
 --- a/modules/core/src/parallel.cpp
 +++ b/modules/core/src/parallel.cpp
-@@ -517,6 +517,7 @@ void parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body, dou
+@@ -521,6 +521,7 @@ void parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body, dou
      bool isNotNestedRegion = !flagNestedParallelFor.load();
      if (isNotNestedRegion)
        isNotNestedRegion = !flagNestedParallelFor.exchange(true);
@@ -80,7 +80,7 @@ index 4525928b94..e7b0bfc177 100644
      if (isNotNestedRegion)
      {
          try
-@@ -531,6 +532,7 @@ void parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body, dou
+@@ -535,6 +536,7 @@ void parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body, dou
          }
      }
      else // nested parallel_for_() calls are not parallelized
@@ -121,6 +121,22 @@ index d5870a0181..8d2514682f 100644
  
              // use the standard C malloc to allocate memory
              void* m = ::malloc(blockSize);
+diff --git a/modules/imgproc/src/shapedescr.cpp b/modules/imgproc/src/shapedescr.cpp
+index f2de38168a..98b947698c 100644
+--- a/modules/imgproc/src/shapedescr.cpp
++++ b/modules/imgproc/src/shapedescr.cpp
+@@ -43,6 +43,11 @@
+ 
+ namespace cv
+ {
++#if defined(__ZEPHYR__)
++#ifndef M_PI
++#define M_PI 3.14159265358979323846
++#endif
++#endif
+ 
+ const float EPS = 1.0e-4f;
+ 
 diff --git a/modules/objdetect/src/cascadedetect.cpp b/modules/objdetect/src/cascadedetect.cpp
 index 97b9d70fef..9ceec68b43 100644
 --- a/modules/objdetect/src/cascadedetect.cpp

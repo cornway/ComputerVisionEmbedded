@@ -1,0 +1,4 @@
+
+
+config QUIRC_LIB
+	bool "quirc library"
