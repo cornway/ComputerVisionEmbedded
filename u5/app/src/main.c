@@ -27,9 +27,6 @@ LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 #error No display chosen in devicetree. Missing "--shield" flag?
 #endif
 
-static const struct device *video_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_camera));
-static const struct device *display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
-
 int main(void)
 {
 	init();

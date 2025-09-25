@@ -6,17 +6,8 @@
 
 cmake_minimum_required(VERSION 3.13.1)
 
-set(BOARDS ${CMAKE_CURRENT_LIST_DIR}/../boards)
-set(OVERLAY_FILE ${BOARDS}/${BOARD}.overlay)
-
-if(EXISTS ${OVERLAY_FILE})
-    list(APPEND EXTRA_DTC_OVERLAY_FILE "${OVERLAY_FILE}")
-else()
-    message(WARNING "${OVERLAY_FILE} not found")
-endif()
-
 set(EXTRA_CONF_FILE
-    ${CMAKE_CURRENT_SOURCE_DIR}/lvgl.conf;${CMAKE_CURRENT_SOURCE_DIR}/usbd.conf
+    ${CMAKE_CURRENT_SOURCE_DIR}/lvgl.conf;
 )
 
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
@@ -41,10 +32,21 @@ target_include_directories(app PRIVATE
 
 target_sources(app PRIVATE
     src/main.c
-    src/uart.cpp
-    src/sample_usbd_init.c
-    src/lvgl_fs_sample.c
     src/gfx_utils.cpp
-    src/grinreflex.cpp
     src/video.cpp
 )
+
+if (CONFIG_BOARD_GRINREFLEX_DK1)
+target_sources(app PRIVATE
+    src/sample_usbd_init.c
+    src/lvgl_fs_sample.c
+    src/uart.cpp
+    src/grinreflex.cpp
+)
+endif()
+
+if (CONFIG_BOARD_GRINREFLEX_DK2)
+target_sources(app PRIVATE
+    src/grinreflex_v2.cpp
+)
+endif()

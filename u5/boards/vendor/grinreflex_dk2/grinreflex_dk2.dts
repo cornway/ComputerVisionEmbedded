@@ -6,18 +6,18 @@
 
 /dts-v1/;
 #include <st/u5/stm32u5g9Xj.dtsi>
-#include <st/u5/stm32u5g9zjtxq-pinctrl.dtsi>
+#include <st/u5/stm32u5g7vjtx-pinctrl.dtsi>
 #include <zephyr/dt-bindings/display/panel.h>
 #include <zephyr/dt-bindings/input/input-event-codes.h>
 #include <st/u5/stm32u5.dtsi>
 
 / {
-	model = "Grinreflex Development Kit V1.0";
+	model = "Grinreflex Development Kit V2.0";
 	compatible = "st,stm32u5g9j-dk2";
 
 	chosen {
-		zephyr,console = &usart1;
-		zephyr,shell-uart = &usart1;
+		zephyr,console = &usart2;
+		zephyr,shell-uart = &usart2;
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
 		zephyr,code-partition = &slot0_partition;
@@ -32,18 +32,10 @@
 		volt-sensor1 = &vbat4;
 	};
 
-	ext_memory: memory@a0000000 {
-		compatible = "zephyr,memory-region";
-		reg = <0xa0000000 DT_SIZE_M(64)>;
-		zephyr,memory-region = "EXTMEM";
-		/* The ATTR_MPU_EXTMEM attribut causing a MPU FAULT */
-		zephyr,memory-attr = <( DT_MEM_ARM(ATTR_MPU_IO) )>;
-	};
-
 	mipi_dbi_st7735r_160x80 {
 		compatible = "zephyr,mipi-dbi-spi";
-		spi-dev = <&spi2>;
-		dc-gpios = <&gpiob 13 GPIO_ACTIVE_HIGH>;
+		spi-dev = <&spi1>;
+		dc-gpios = <&gpiob 15 GPIO_ACTIVE_HIGH>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 
@@ -84,18 +76,18 @@
 		gpio-map-mask = <0xffffffff 0xffffffc0>;
 		gpio-map-pass-thru = <0 0x3f>;
 
-		gpio-map = <3  0 &gpiog 13  0>,  /* DVP_SDA (I2C1_SDA) OK*/
-			   <5  0 &gpiog 14  0>,  /* DVP_SCL (I2C1_SCL) OK*/
-			   <7  0 &gpiob 7  0>,  /* DVP_VSYNC OK*/
+		gpio-map = <3  0 &gpiob 14  0>,  /* DVP_SDA (I2C2_SDA)*/
+			   <5  0 &gpiob 13  0>,  /* DVP_SCL (I2C2_SCL)*/
+			   <7  0 &gpiob 7  0>,  /* DVP_VSYNC*/
 			   <8  0 &gpioa 7  0>,  /* DVP_PWDN NC*/
-			   <9  0 &gpiod 8  0>,  /* DVP_HSYNC OK*/
-			   <12 0 &gpiod 7  0>,  /* DVP_D7 OK*/
-			   <13 0 &gpioa 8  0>,  /* DVP_XCLK (RCC_MCO1) OK*/
-			   <14 0 &gpiob 8  0>,  /* DVP_D6 OK*/
-			   <16 0 &gpiob 6  0>,  /* DVP_D5 OK*/
-			   <17 0 &gpiod 9  0>,  /* DVP_PCLK OK*/
-			   <18 0 &gpioe 4  0>,  /* DVP_D4 OK*/
-			   <19 0 &gpioc 6  0>,  /* DVP_D0 OK*/
+			   <9  0 &gpioa 4  0>,  /* DVP_HSYNC*/
+			   <12 0 &gpioe 6  0>,  /* DVP_D7*/
+			   <13 0 &gpioa 8  0>,  /* DVP_XCLK (RCC_MCO1)*/
+			   <14 0 &gpioe 5  0>,  /* DVP_D6*/
+			   <16 0 &gpiob 6  0>,  /* DVP_D5*/
+			   <17 0 &gpiod 9  0>,  /* DVP_PCLK*/
+			   <18 0 &gpioe 4  0>,  /* DVP_D4*/
+			   <19 0 &gpioc 6  0>,  /* DVP_D0*/
 			   <20 0 &gpioc 9  0>,  /* DVP_D3 */
 			   <21 0 &gpioc 7  0>,  /* DVP_D1 */
 			   <22 0 &gpioc 8  0>;  /* DVP_D2 */
@@ -109,16 +101,6 @@
 
 &clk_hse {
 	clock-frequency = <DT_FREQ_M(16)>;
-	status = "okay";
-};
-
-&clk_msis {
-	status = "okay";
-	msi-range = <4>; /* 4MHz (reset value) */
-	msi-pll-mode;
-};
-
-&clk_lse {
 	status = "okay";
 };
 
@@ -161,22 +143,22 @@
 	apb3-prescaler = <1>;
 };
 
-&usart1 {
-	pinctrl-0 = <&usart1_tx_pa9 &usart1_rx_pa10>;
-	pinctrl-names = "default";
-	current-speed = <115200>;
-	status = "okay";
-};
-
 &usart2 {
-	pinctrl-0 = <&usart2_tx_pa2 &usart2_rx_pa3>;
+	pinctrl-0 = <&usart2_tx_pa2 &usart2_rx_pa15>;
 	pinctrl-names = "default";
 	current-speed = <115200>;
 	status = "okay";
 };
 
 &i2c1 {
-	pinctrl-0 = <&i2c1_scl_pg14 &i2c1_sda_pg13>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c1_scl_pb8 &i2c1_sda_pb3>;
+	status = "okay";
+	clock-frequency = <I2C_BITRATE_FAST>;
+};
+
+&i2c2 {
+	pinctrl-0 = <&i2c2_scl_pb10 &i2c2_sda_pb14>;
 	pinctrl-names = "default";
 	status = "okay";
 	clock-frequency = <I2C_BITRATE_FAST>;
@@ -198,26 +180,19 @@
 	};
 };
 
-&i2c2 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&i2c2_scl_pf1 &i2c2_sda_pf0>;
-	status = "okay";
-	clock-frequency = <I2C_BITRATE_FAST>;
-};
-
 &spi1 {
-	pinctrl-0 = <&spi1_sck_pa5 &spi1_miso_pa6 &spi1_mosi_pb5>;
+	pinctrl-0 = <&spi1_sck_pa1 &spi1_mosi_pe15>;
 	pinctrl-names = "default";
-	cs-gpios = <&gpiob 14 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
-	clock-frequency = <DT_FREQ_M(10)>;
+	cs-gpios = <&gpioe 12 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+	clock-frequency = <DT_FREQ_M(66)>;
 	status = "okay";
 };
 
 &spi2 {
-	pinctrl-0 = <&spi2_sck_pd3 &spi2_mosi_pd4>;
+	pinctrl-0 = <&spi2_sck_pb13 &spi2_mosi_pc1 &spi2_miso_pc2>;
 	pinctrl-names = "default";
-	cs-gpios = <&gpiob 14 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
-	clock-frequency = <DT_FREQ_M(66)>;
+	cs-gpios = <&gpiob 11 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+	clock-frequency = <DT_FREQ_M(10)>;
 	status = "okay";
 };
 
@@ -261,58 +236,6 @@
 	status = "okay";
 };
 
-&adc1 {
-	pinctrl-0 = <&adc1_in5_pa0 &adc1_in12_pa7>;
-	pinctrl-names = "default";
-	st,adc-clock-source = "ASYNC";
-	st,adc-prescaler = <1>;
-	status = "okay";
-
-	#address-cells = <1>;
-	#size-cells = <0>;
-
-	channel@5 {
-		reg = <0x5>;
-		zephyr,gain = "ADC_GAIN_1";
-		zephyr,reference = "ADC_REF_INTERNAL";
-		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
-		zephyr,resolution = <14>;
-	};
-
-	channel@c {
-		reg = <0xc>;
-		zephyr,gain = "ADC_GAIN_1";
-		zephyr,reference = "ADC_REF_INTERNAL";
-		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
-		zephyr,resolution = <14>;
-	};
-};
-
-&adc4 {
-	pinctrl-0 = <&adc4_in4_pc3>;
-	pinctrl-names = "default";
-	st,adc-clock-source = "ASYNC";
-	st,adc-prescaler = <1>;
-	status = "okay";
-
-	#address-cells = <1>;
-	#size-cells = <0>;
-
-	channel@4 {
-		reg = <0x4>;
-		zephyr,gain = "ADC_GAIN_1";
-		zephyr,reference = "ADC_REF_INTERNAL";
-		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
-		zephyr,resolution = <12>;
-	};
-};
-
-zephyr_udc0: &usbotg_hs {
-	pinctrl-0 = <&usb_otg_hs_dm_pa11 &usb_otg_hs_dp_pa12>;
-	pinctrl-names = "default";
-	status = "okay";
-};
-
 &flash0 {
 	partitions {
 		compatible = "fixed-partitions";
@@ -344,42 +267,6 @@ zephyr_udc0: &usbotg_hs {
 	};
 };
 
-&xspi1 {
-	clocks = <&rcc STM32_CLOCK(AHB2_2, 12U)>,
-			 <&rcc STM32_SRC_PLL2_Q HSPI_SEL(2)>;
-
-	pinctrl-0 = <&hspi1_dqs0_pi2 &hspi1_ncs_ph9
-		&hspi1_io0_ph10 &hspi1_io1_ph11
-		&hspi1_io2_ph12 &hspi1_io3_ph13
-		&hspi1_io4_ph14 &hspi1_io5_ph15
-		&hspi1_io6_pi0 &hspi1_io7_pi1
-		&hspi1_clk_pi3>;
-	pinctrl-names = "default";
-	status = "okay";
-
-	mx66lm1g45: xspi-nor-flash@0 {
-		compatible = "st,stm32-xspi-nor";
-		reg = <0>;
-		size = <DT_SIZE_M(512)>; /* 1 Gbits */
-		ospi-max-frequency = <DT_FREQ_M(128)>;
-		spi-bus-width = <XSPI_OCTO_MODE>;
-		data-rate = <XSPI_DTR_TRANSFER>;
-		four-byte-opcodes;
-		status = "okay";
-
-		partitions {
-			compatible = "fixed-partitions";
-			#address-cells = <1>;
-			#size-cells = <1>;
-
-			extflash_partition: partition@0 {
-				label = "ext_storage";
-				reg = <0 DT_SIZE_M(64)>;
-			};
-		};
-	};
-};
-
 &rtc {
 	clocks =  <&rcc STM32_CLOCK_BUS_APB3 0x00200000>,
 			  <&rcc STM32_SRC_LSE RTC_SEL(1)>;
@@ -407,18 +294,18 @@ zephyr_udc0: &usbotg_hs {
 };
 
 
-&gpiob {
+&gpiod {
 	status = "okay";
 
 	lcd_led {
 		gpio-hog;
-		gpios = <15 GPIO_ACTIVE_LOW>;
+		gpios = <8 GPIO_ACTIVE_LOW>;
 		output-high;
 	};
 };
 
 zephyr_camera_dvp: &dcmi {
-	pinctrl-0 = <&dcmi_hsync_pd8
+	pinctrl-0 = <&dcmi_hsync_pa4
 				&dcmi_pixclk_pd9
 				&dcmi_vsync_pb7
 		     	&dcmi_d0_pc6
@@ -427,8 +314,8 @@ zephyr_camera_dvp: &dcmi {
 				&dcmi_d3_pc9
 		     	&dcmi_d4_pe4
 				&dcmi_d5_pb6
-				&dcmi_d6_pb8
-				&dcmi_d7_pb9>;
+				&dcmi_d6_pe5
+				&dcmi_d7_pe6>;
 	pinctrl-names = "default";
 
 	port {
@@ -459,8 +346,4 @@ zephyr_camera_dvp: &dcmi {
 	prescaler = <MCO1_PRE(MCO1_PRE_DIV_4)>;
 	pinctrl-0 = <&rcc_mco_pa8>;
 	pinctrl-names = "default";
-};
-
-&dcmi {
-	jpeg-dev = <&jpeg0>;
 };

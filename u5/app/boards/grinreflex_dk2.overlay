@@ -1,0 +1,37 @@
+/*
+ * Copyright (c) 2024, Eve Redero
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+#include <zephyr/dt-bindings/lvgl/lvgl.h>
+
+/ {
+	chosen: chosen {
+		zephyr,nema = &nema0;
+		zephyr,spi1 = &spi1;
+		zephyr,jpeg = &jpeg0;
+	};
+
+	nema0: nema-gfx {
+		compatible = "st,nema-gfx";
+		status = "okay";
+	};
+
+	jpeg0: jpeg_hw {
+		compatible = "st,jpeg-hw";
+		dmas = <&gpdma1 2 125 (STM32_DMA_PERIPH_RX | STM32_DMA_PERIPH_32BITS | STM32_DMA_MEM_32BITS)
+				&gpdma1 3 124 (STM32_DMA_PERIPH_TX | STM32_DMA_PERIPH_32BITS | STM32_DMA_MEM_32BITS)>;
+		dma-names = "tx", "rx";
+		status = "okay";
+	};
+};
+
+&gpdma1 {
+	status = "okay";
+};
+
+&dcmi {
+	jpeg-dev = <&jpeg0>;
+};

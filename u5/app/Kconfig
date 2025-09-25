@@ -23,12 +23,12 @@ menu "GrinReflex dk1 settings"
 config GRINREFLEX_JPEG_VIDEO
 	bool "Enable jpeg video input"
 	default y
-    depends on BOARD_GRINREFLEX_DK1
+    depends on BOARD_GRINREFLEX_DK1 || BOARD_GRINREFLEX_DK2
 
 config GRINREFLEX_JPEG_VIDEO_QUALITY
     int "Set jpeg quality, lower value - higher quality"
     default 63
-    depends on BOARD_GRINREFLEX_DK1
+    depends on BOARD_GRINREFLEX_DK1 || BOARD_GRINREFLEX_DK2
 
 config GRINREFLEX_VIDEO_WIDTH
     int "Width of a video frame"
