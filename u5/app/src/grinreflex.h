@@ -30,8 +30,8 @@ extern "C" {
 
 #endif /* defined(CONFIG_GRINREFLEX_JPEG_VIDEO) */
 
-#define GRAY_FRAME_WIDTH 120
-#define GRAY_FRAME_HEIGHT 120
+#define GRAY_FRAME_WIDTH 80
+#define GRAY_FRAME_HEIGHT 80
 
 
 int init();
