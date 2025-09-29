@@ -1,0 +1,40 @@
+#ifndef GRINREFLEX_CASCADES_H
+#define GRINREFLEX_CASCADES_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define _EVAL(__x) __x
+
+#define _INCBIN(__name, __path) \
+extern const uint8_t _cascade_##__name##_start[]; \
+extern const uint8_t _cascade_##__name##_end[]; \
+                                            \
+__asm__ (                                   \
+    ".section .rodata.cascades\n"           \
+    ".global _cascade_" #__name "_start\n"         \
+    ".global _cascade_" #__name "_end\n"           \
+    ".balign 4\n"                           \
+    "_cascade_" #__name "_start:\n"         \
+    ".incbin \"" #__path "\"\n"             \
+    "_cascade_" #__name "_end:\n"           \
+    ".previous\n"                           \
+);                                          \
+                                            \
+static inline size_t cascade_##__name##_len() {   \
+    return (size_t)_cascade_##__name##_end - (size_t)_cascade_##__name##_start; \
+}                                           \
+                                            \
+static inline const uint8_t *cascade_##__name##_data() {  \
+    return _cascade_##__name##_start;               \
+}
+
+_INCBIN(face, @OPENCV_CASCADE_FACE_PATH@)
+_INCBIN(smile, @OPENCV_CASCADE_SMILE_PATH@)
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* GRINREFLEX_CASCADES_H */

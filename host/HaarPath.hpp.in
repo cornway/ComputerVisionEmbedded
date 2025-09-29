@@ -1,0 +1,3 @@
+#pragma once
+
+constexpr const char* HAAR_PATH = "@OPENCV_HAAR_PATH@";

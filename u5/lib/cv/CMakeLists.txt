@@ -24,7 +24,7 @@ set(CMAKE_CXX_FLAGS \"${external_project_cxxflags} -DOPENCV_FLANN_USE_STD_RAND\"
 ")
 
 set(OPENCV_BINARY_DIR ${CMAKE_BINARY_DIR}/opencv)
-set(OPENCV_INSTALL_DIR ${OPENCV_BINARY_DIR}/install)
+set(OPENCV_INSTALL_DIR ${OPENCV_BINARY_DIR}/install CACHE INTERNAL "")
 
 add_custom_target(opencv_cmake
     DEPENDS ${OPENCV_BINARY_DIR}/CMakeCache.txt
