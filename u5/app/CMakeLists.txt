@@ -36,6 +36,12 @@ target_sources(app PRIVATE
     src/video.cpp
 )
 
+if (CONFIG_BOARD_GRINREFLEX_DK1 OR CONFIG_BOARD_GRINREFLEX_DK2)
+target_sources(app PRIVATE
+    src/grinreflex_utils.cpp
+)
+endif()
+
 if (CONFIG_BOARD_GRINREFLEX_DK1)
 target_sources(app PRIVATE
     src/sample_usbd_init.c

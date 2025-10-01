@@ -49,24 +49,37 @@ int main(int, char**) {
 
 		cv::Mat frameOriginalGray;
 		cv::cvtColor(frameOriginal, frameOriginalGray, cv::COLOR_BGR2GRAY);
-		cv::equalizeHist(frameOriginalGray, frameOriginalGray);
+		//cv::equalizeHist(frameOriginalGray, frameOriginalGray);
+
+		cv::Mat frameCroppedGray;
+
+		cv::Rect crop;
+		crop.x = (frameOriginalGray.cols - 320) / 2;
+		crop.width = 320;
+		crop.y = (frameOriginalGray.rows - 240) / 2;
+		crop.height = 240;
+		frameCroppedGray = frameOriginalGray(crop);
 
 		cv::Rect faceROIMax{};
-		faceROIMax.width = 80;
-		faceROIMax.height = 80;
+		faceROIMax.width = 60;
+		faceROIMax.height = 60;
 
-		cv::resize(frameOriginalGray, frameScreenGray, cv::Size(faceROIMax.width, faceROIMax.height), 0.0f, 0.0f, cv::INTER_LINEAR);
+		cv::resize(frameCroppedGray, frameScreenGray, cv::Size(120, 120), 0.0f, 0.0f, cv::INTER_NEAREST );
+
+		std::vector<cv::Rect> faces, smiles;
 
 		std::vector<cv::Rect> ROIs = detectFaceAndSmile(
 			face_cascade,
 			smile_cascade,
 			frameScreenGray,
-			frameOriginalGray,
-			faceROIMax
+			frameCroppedGray,
+			faceROIMax,
+			faces,
+			smiles
 		);
 
 		for (const auto &ROI : ROIs) {
-			rectangle(frameScreenGray, ROI, cv::Scalar(0, 0, 255), 2, 8, 0);
+			rectangle(frameScreenGray, ROI, cv::Scalar(0, 0, 255), 1, 1, 0);
 		}
 
 		cv::imshow(window_name, frameScreenGray);
