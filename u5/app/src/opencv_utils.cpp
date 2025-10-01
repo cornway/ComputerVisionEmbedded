@@ -56,19 +56,19 @@ cv::Mat cv_preprocessForQR(const cv::Mat& bgr) {
 std::vector<cv::Rect> detectFaceAndSmile(
     cv::CascadeClassifier &faceCascade,
     cv::CascadeClassifier &smileCascade,
-    cv::Mat &grayScreen,
-    cv::Mat &grayFull,
-    cv::Rect &faceROIMax) {
+    cv::Mat &thumbnailFrame,
+    cv::Mat &fullFrame,
+    cv::Rect &faceROIMax,
+    std::vector<cv::Rect> &faceROIs,
+    std::vector<cv::Rect> &smileROIs) {
 
     std::vector<cv::Rect> outROIs;
-    std::vector<cv::Rect> faceROIs;
-    std::vector<cv::Rect> smileROIs;
 
-    const double scaleFactor = 1.05;
+    const double scaleFactor = 1.04;
     const int minNeighbors = 3;
     const int flags = 0;
 
-    faceCascade.detectMultiScale(grayScreen, faceROIs, scaleFactor, minNeighbors,
+    faceCascade.detectMultiScale(thumbnailFrame, faceROIs, scaleFactor, minNeighbors,
                                 flags);
 
     for (auto & faceROI : faceROIs) {
@@ -76,28 +76,33 @@ std::vector<cv::Rect> detectFaceAndSmile(
 
         try {
 
-            cv::Rect faceROI_Orig = remapROI(faceROI, grayScreen, grayFull);
+            cv::Rect faceROIFull = remapROI(faceROI, thumbnailFrame, fullFrame);
 
             /* Get lower half/third of face ROI + some gap where the smile is most likelly to be */
-            const uint32_t offset = (faceROI_Orig.height * 2) / 3;
-            faceROI_Orig.y = faceROI_Orig.y + offset;
-            //faceROI_Orig.height = faceROI_Orig.height - faceROI_Orig.height / 3;
-            if (faceROI_Orig.height + faceROI_Orig.y > grayFull.rows) {
-                faceROI_Orig.height = grayFull.rows - faceROI_Orig.y;
+            const uint32_t offset = (faceROIFull.height * 2) / 3;
+            faceROIFull.y = faceROIFull.y + offset;
+            faceROIFull.height = faceROIFull.height - faceROIFull.height / 2;
+            if (faceROIFull.height + faceROIFull.y > fullFrame.rows) {
+                faceROIFull.height = fullFrame.rows - faceROIFull.y;
             }
+
+            cv::Rect roiThumb = remapROI(faceROIFull, fullFrame, thumbnailFrame);
+            outROIs.push_back(roiThumb);
 
             float sx = 1.0f;
             float sy = 1.0f;
 
-            cv::Mat faceROIFrame = grayFull(faceROI_Orig);
+            cv::Mat faceROIFrame = fullFrame(faceROIFull);
             cv::Mat faceROIFrameResized;
 
             // Get area with minimum number of pixels
-            if (faceROIMax.width * faceROIMax.height < faceROI_Orig.width * faceROI_Orig.height) {
-                sx = (float)faceROIMax.width / (float)faceROI_Orig.width;
-                sy = (float)faceROIMax.height / (float)faceROI_Orig.height;
+            if (faceROIMax.width * faceROIMax.height < faceROIFull.width * faceROIFull.height) {
+                sx = (float)faceROIMax.width / (float)faceROIFull.width;
+                sy = (float)faceROIMax.height / (float)faceROIFull.height;
+                cv::resize(faceROIFrame, faceROIFrameResized, cv::Size(), sx, sy, cv::INTER_LINEAR);
+            } else {
+                faceROIFrameResized = faceROIFrame;
             }
-            cv::resize(faceROIFrame, faceROIFrameResized, cv::Size(), sx, sy, cv::INTER_LINEAR);
 
             const double scaleFactor = 1.05;
             const int minNeighbors = 3;
@@ -106,15 +111,15 @@ std::vector<cv::Rect> detectFaceAndSmile(
             smileCascade.detectMultiScale(faceROIFrameResized, smileROIs, scaleFactor, minNeighbors,
                                         flags);
 
+            float ssx_inv = (float)thumbnailFrame.cols / (float)fullFrame.cols;
+            float ssy_inv = (float)thumbnailFrame.rows / (float)fullFrame.rows;
+
             for (auto & smileROI : smileROIs) {
-                cv::Rect smileROIRemapped = translateScaleROI(smileROI, 1.0f / sx, 1.0f / sy, faceROI_Orig.x, faceROI_Orig.y);
-
-                float ssx_inv = (float)grayScreen.cols / (float)grayFull.cols;
-                float ssy_inv = (float)grayScreen.rows / (float)grayFull.rows;
-
+                cv::Rect smileROIRemapped = translateScaleROI(smileROI, 1.0f / sx, 1.0f / sy, faceROIFull.x, faceROIFull.y);
                 smileROIRemapped = translateScaleROI(smileROIRemapped, ssx_inv, ssy_inv, 0.0f, 0.0f);
 
                 outROIs.push_back(smileROIRemapped);
+                smileROI = smileROIRemapped;
             }
 
         } catch (cv::Exception &ce) {

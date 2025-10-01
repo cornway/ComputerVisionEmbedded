@@ -17,6 +17,10 @@ namespace Video
 static const struct device *video_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_camera));
 static struct video_buffer *buffers[2];
 
+#if defined(CONFIG_GRINREFLEX_JPEG_VIDEO)
+static struct video_buffer second_buffer{};
+#endif
+
 void setup()
 {
 	struct video_format fmt;
@@ -127,11 +131,31 @@ void setup()
 	bsize = fmt.pitch * fmt.height;
 
 #if defined(CONFIG_GRINREFLEX_JPEG_VIDEO)
-    bsize = CONFIG_VIDEO_BUFFER_POOL_SZ_MAX / 2;
-#else
-	bsize = fmt.pitch * fmt.height;
-#endif
+    bsize = CONFIG_VIDEO_BUFFER_POOL_SZ_MAX;
 
+	buffers[0] = video_buffer_aligned_alloc(bsize, CONFIG_VIDEO_BUFFER_POOL_ALIGN,
+						K_FOREVER);
+	if (buffers[0] == NULL) {
+		LOG_ERR("Unable to alloc video buffer");
+		return;
+	}
+	buffers[0]->type = type;
+	video_enqueue(video_dev, buffers[0]);
+
+	buffers[1] = &second_buffer;
+
+	bsize = CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * 2;
+	buffers[1]->type = type;
+	buffers[1]->buffer = new uint8_t[bsize];
+	buffers[1]->size = bsize;
+
+	if (buffers[1]->buffer == NULL) {
+		LOG_ERR("Unable to alloc video buffer");
+		return;
+	}
+
+	video_enqueue(video_dev, buffers[1]);
+#else /* !defined(CONFIG_GRINREFLEX_JPEG_VIDEO) */
 	/* Alloc video buffers and enqueue for capture */
 	for (i = 0; i < ARRAY_SIZE(buffers); i++) {
 		buffers[i] = video_buffer_aligned_alloc(bsize, CONFIG_VIDEO_BUFFER_POOL_ALIGN,
@@ -143,6 +167,7 @@ void setup()
 		buffers[i]->type = type;
 		video_enqueue(video_dev, buffers[i]);
 	}
+#endif /* defined(CONFIG_GRINREFLEX_JPEG_VIDEO) */
 
 	/* Set controls */
 	struct video_control ctrl = {.id = VIDEO_CID_HFLIP, .val = 1};
