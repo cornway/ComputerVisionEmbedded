@@ -28,7 +28,12 @@ void cropFullFrameToRoi(lv_obj_t *parent, uint8_t *fullFb, uint8_t *roiFb) {
     Gfx::GfxBuffer dst{};
 
     uint32_t x = (FULL_FRAME_WIDTH - ROI_FRAME_WIDTH) / 2;
-    uint32_t y = (FULL_FRAME_HEIGHT - ROI_FRAME_HEIGHT) / 2;
+    //uint32_t y = (FULL_FRAME_HEIGHT - ROI_FRAME_HEIGHT) / 2;
+#if defined(FULL_FRAME_FLIP_Y)
+    uint32_t y = 0;
+#else
+    uint32_t y = FULL_FRAME_HEIGHT - ROI_FRAME_HEIGHT;
+#endif
 
     uint32_t fullFbStride = FULL_FRAME_WIDTH * LV_COLOR_FORMAT_GET_SIZE(FULL_FRAME_COLOR_FORMAT);
     uint32_t fullFbOffset = (y * fullFbStride) + x;
@@ -50,8 +55,13 @@ void cropFullFrameToRoi(lv_obj_t *parent, uint8_t *fullFb, uint8_t *roiFb) {
     dst.cf = LV_COLOR_FORMAT_L8;
     dst.size = ROI_FRAME_HEIGHT * roiFbStride;
 
+
+#if defined(FULL_FRAME_FLIP_Y)
+    Gfx::fit(parent, src, dst, true);
+#else
     Gfx::fit(parent, src, dst);
-    lv_task_handler();
+#endif
+    //lv_task_handler();
 }
 
 void fitRoiFrameToThumbnail(lv_obj_t *parent, uint8_t *roiFb, uint8_t *tFb) {
@@ -77,5 +87,5 @@ void fitRoiFrameToThumbnail(lv_obj_t *parent, uint8_t *roiFb, uint8_t *tFb) {
     dst.size = THUMBNAIL_FRAME_HEIGHT * tnFbStride;
 
     Gfx::fit(parent, src, dst);
-    lv_task_handler();
+    //lv_task_handler();
 }

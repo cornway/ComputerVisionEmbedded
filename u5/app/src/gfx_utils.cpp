@@ -3,7 +3,7 @@
 
 namespace Gfx {
 
-void fit(lv_obj_t *canvas, const GfxBuffer &src, const GfxBuffer &dst, const int32_t x, const int32_t y) {
+void fit(lv_obj_t *canvas, const GfxBuffer &src, const GfxBuffer &dst, bool flip_y) {
 
   lv_image_dsc_t src_img = {
       .header =
@@ -31,7 +31,13 @@ void fit(lv_obj_t *canvas, const GfxBuffer &src, const GfxBuffer &dst, const int
   img_dsc.scale_x = (LV_SCALE_NONE * (int32_t)(dst.width)) / src.width;
   img_dsc.scale_y = (LV_SCALE_NONE * (int32_t)(dst.height)) / src.height;
 
-  lv_area_t coords_img = {x, y, src.width - 1, src.height - 1};
+  if (flip_y) {
+    img_dsc.rotation = 1800;
+    img_dsc.pivot.x = src.width  / 2;
+    img_dsc.pivot.y = src.height / 2;
+  }
+
+  lv_area_t coords_img = {0, 0, src.width - 1, src.height - 1};
 
   lv_draw_image(&layer, &img_dsc, &coords_img);
 
