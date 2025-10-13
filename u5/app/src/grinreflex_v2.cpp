@@ -36,6 +36,7 @@ LOG_MODULE_REGISTER(grinreflex_app);
 static const struct device *video_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_camera));
 static const struct device *display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 const struct device *jpeg_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_jpeg));
+static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 
 static uint8_t fullFrameBuffer[FULL_FRAME_WIDTH * FULL_FRAME_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(FULL_FRAME_COLOR_FORMAT)];
 static uint8_t roiFrameBuffer[ROI_FRAME_WIDTH * ROI_FRAME_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_L8)];
@@ -66,6 +67,14 @@ int init()
 
     if (!device_is_ready(jpeg_dev)) {
         printf("%s JPEG device not ready", jpeg_dev->name);
+        return -ENODEV;
+    }
+
+    if (!gpio_is_ready_dt(&led)) {
+        return -ENODEV;
+    }
+
+    if (gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE) < 0) {
         return -ENODEV;
     }
 
@@ -112,7 +121,7 @@ int loop()
     struct jpeg_out_prop jpeg_prop;
 
     vbuf_ptr->type = VIDEO_BUF_TYPE_OUTPUT;
-    
+
     int err = video_dequeue(video_dev, &vbuf_ptr, K_FOREVER);
     if (err) {
         LOG_ERR("Unable to dequeue video buf");
@@ -132,6 +141,7 @@ int loop()
 
     cropFullFrameToRoi(dummy_canvas, fullFrameBuffer, roiFrameBuffer);
     fitRoiFrameToThumbnail(screen_canvas, roiFrameBuffer, thumbnailFrameBuffer);
+    lv_task_handler();
 
     err = video_enqueue(video_dev, vbuf_ptr);
     if (err) {
@@ -142,7 +152,9 @@ int loop()
 
     cropFullFrameToRoi(dummy_canvas, fullFrameBuffer, roiFrameBuffer);
     fitRoiFrameToThumbnail(screen_canvas, roiFrameBuffer, thumbnailFrameBuffer);
+    lv_task_handler();
 
+    // Return buffer back, we don't need it anymore, thank you
     err = video_enqueue(video_dev, vbuf_ptr);
     if (err) {
         LOG_ERR("Unable to requeue video buf");
@@ -153,8 +165,8 @@ int loop()
     cv::Mat matGrayFull(ROI_FRAME_HEIGHT, ROI_FRAME_WIDTH, CV_8UC1, roiFrameBuffer);
 
     cv::Rect faceROIMax{};
-    faceROIMax.width = 60;
-    faceROIMax.height = 60;
+    faceROIMax.width = 64;
+    faceROIMax.height = 64;
 
     std::vector<cv::Rect> faces;
     std::vector<cv::Rect> smiles;
@@ -186,6 +198,8 @@ int loop()
         lv_obj_set_size(ROIRectSmile, object.width, object.height);
 
         lv_obj_remove_flag(ROIRectSmile, LV_OBJ_FLAG_HIDDEN);
+
+        gpio_pin_set_dt(&led, 0);
     } else {
         lv_obj_add_flag(ROIRectSmile, LV_OBJ_FLAG_HIDDEN);
     }

@@ -57,14 +57,15 @@ int main(int, char**) {
 		crop.x = (frameOriginalGray.cols - 320) / 2;
 		crop.width = 320;
 		crop.y = (frameOriginalGray.rows - 240) / 2;
+		//crop.y = 240;
 		crop.height = 240;
 		frameCroppedGray = frameOriginalGray(crop);
 
 		cv::Rect faceROIMax{};
-		faceROIMax.width = 60;
-		faceROIMax.height = 60;
+		faceROIMax.width = 64;
+		faceROIMax.height = 64;
 
-		cv::resize(frameCroppedGray, frameScreenGray, cv::Size(120, 120), 0.0f, 0.0f, cv::INTER_NEAREST );
+		cv::resize(frameCroppedGray, frameScreenGray, cv::Size(80, 80), 0.0f, 0.0f, cv::INTER_NEAREST );
 
 		std::vector<cv::Rect> faces, smiles;
 
@@ -78,7 +79,10 @@ int main(int, char**) {
 			smiles
 		);
 
-		for (const auto &ROI : ROIs) {
+		for (const auto &ROI : faces) {
+			rectangle(frameScreenGray, ROI, cv::Scalar(0, 0, 255), 1, 1, 0);
+		}
+		for (const auto &ROI : smiles) {
 			rectangle(frameScreenGray, ROI, cv::Scalar(0, 0, 255), 1, 1, 0);
 		}
 

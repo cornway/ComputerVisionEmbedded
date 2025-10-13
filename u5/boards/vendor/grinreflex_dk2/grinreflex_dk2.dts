@@ -25,11 +25,21 @@
 		zephyr,camera = &zephyr_camera_dvp;
 	};
 
+	led_gpios {
+		compatible = "gpio-leds";
+
+		green_led_0: led_0 {
+			gpios = <&gpiob 11 GPIO_ACTIVE_HIGH>;
+			label = "Face detect OK";
+		};
+	};
+
 	aliases {
 		watchdog0 = &iwdg;
 		die-temp0 = &die_temp;
 		volt-sensor0 = &vref1;
 		volt-sensor1 = &vbat4;
+		led0 = &green_led_0;
 	};
 
 	mipi_dbi_st7735r_160x80 {
@@ -153,7 +163,7 @@
 &i2c1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c1_scl_pb8 &i2c1_sda_pb3>;
-	status = "okay";
+	status = "disabled";
 	clock-frequency = <I2C_BITRATE_FAST>;
 };
 
@@ -193,12 +203,12 @@
 	pinctrl-names = "default";
 	cs-gpios = <&gpiob 11 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 	clock-frequency = <DT_FREQ_M(10)>;
-	status = "okay";
+	status = "disabled";
 };
 
 &timers1 {
 	st,prescaler = <1>;
-	status = "okay";
+	status = "disabled";
 
 	pwm1: pwm {
 		status = "okay";
@@ -209,7 +219,7 @@
 
 &timers2 {
 	st,prescaler = <1>;
-	status = "okay";
+	status = "disabled";
 
 	pwm2: pwm {
 		status = "okay";
@@ -274,23 +284,23 @@
 };
 
 &iwdg {
-	status = "okay";
+	status = "disabled";
 };
 
 &rng {
-	status = "okay";
+	status = "disabled";
 };
 
 &die_temp {
-	status = "okay";
+	status = "disabled";
 };
 
 &vref1 {
-	status = "okay";
+	status = "disabled";
 };
 
 &vbat4 {
-	status = "okay";
+	status = "disabled";
 };
 
 

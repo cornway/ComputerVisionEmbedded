@@ -1,0 +1,20 @@
+diff --git a/stm32cube/stm32u5xx/drivers/src/stm32u5xx_hal_dma_ex.c b/stm32cube/stm32u5xx/drivers/src/stm32u5xx_hal_dma_ex.c
+index d60eca23..708ff379 100644
+--- a/stm32cube/stm32u5xx/drivers/src/stm32u5xx_hal_dma_ex.c
++++ b/stm32cube/stm32u5xx/drivers/src/stm32u5xx_hal_dma_ex.c
+@@ -516,6 +516,9 @@
+ /* Includes ----------------------------------------------------------------------------------------------------------*/
+ #include "stm32u5xx_hal.h"
+ 
++#pragma GCC push_options
++#pragma GCC optimize ("O0")
++
+ /** @addtogroup STM32U5xx_HAL_Driver
+   * @{
+   */
+@@ -4717,3 +4720,5 @@ static void DMA_List_CleanQueue(DMA_QListTypeDef *const pQList)
+ /**
+   * @}
+   */
++
++#pragma GCC pop_options

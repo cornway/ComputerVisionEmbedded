@@ -33,6 +33,6 @@ int main(void)
 
 	while (1)
 	{
-		loop(1);
+		loop();
 	}
 }
