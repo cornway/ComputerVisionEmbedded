@@ -1,0 +1,35 @@
+#-------------------------------------------------------------------------------
+# Zephyr Example Application
+#
+# Copyright (c) 2021 Nordic Semiconductor ASA
+# SPDX-License-Identifier: Apache-2.0
+
+cmake_minimum_required(VERSION 3.13.1)
+
+set(EXTRA_CONF_FILE
+    ${CMAKE_CURRENT_SOURCE_DIR}/lvgl.conf;
+)
+
+find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
+
+project(gf_dkx)
+
+target_include_directories(app PRIVATE
+    src
+)
+
+target_sources(app PRIVATE
+    src/main.c
+)
+
+include(${ZEPHYR_BASE}/samples/subsys/usb/common/common.cmake)
+
+if (CONFIG_OPENCV_LIB)
+target_sources(app PRIVATE
+    src/opencv_fd_app.cpp
+)
+else()
+target_sources(app PRIVATE
+    src/lvgl_video_app.cpp
+)
+endif()

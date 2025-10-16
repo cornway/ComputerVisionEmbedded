@@ -4,7 +4,7 @@
 
 #if defined(CONFIG_OPENCV_LIB)
 #include "opencv2/opencv.hpp"
-#include "opencv_utils.hpp"
+#include "gf/opencv_utils.hpp"
 #include "cascades.h"
 #endif 
 
@@ -24,19 +24,21 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(grinreflex_app);
 
-#include "video.hpp"
-#include "gfx_utils.hpp"
+#include "gf/video.hpp"
+#include "gf/lvgl_utils.hpp"
 
 #include <app/drivers/jpeg.h>
 
-#include "grinreflex_config.hpp"
-#include "grinreflex_utils.hpp"
+#include "config.hpp"
+#include "gf/utils.hpp"
 #include "grinreflex.h"
 
 static const struct device *video_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_camera));
 static const struct device *display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 const struct device *jpeg_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_jpeg));
+#if DT_NODE_EXISTS(DT_ALIAS(led0))
 static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
+#endif
 
 static uint8_t fullFrameBuffer[FULL_FRAME_WIDTH * FULL_FRAME_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(FULL_FRAME_COLOR_FORMAT)];
 static uint8_t roiFrameBuffer[ROI_FRAME_WIDTH * ROI_FRAME_HEIGHT * LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_L8)];
@@ -46,12 +48,13 @@ static lv_obj_t *screen_canvas;
 static lv_obj_t *dummy_canvas;
 static lv_obj_t *screen;
 
-#if defined(CONFIG_OPENCV_LIB)
 static lv_obj_t *ROIRectFace;
 static lv_obj_t *ROIRectSmile;
 static cv::CascadeClassifier faceCascade;
 static cv::CascadeClassifier smileCascade;
-#endif /* defined(CONFIG_OPENCV_LIB) */
+float constexpr smileROIGammaMax = 0.7f;
+float constexpr smileROIGammaMin = 0.1f;
+float smileROIGamma = smileROIGammaMin;
 
 int init()
 {
@@ -70,6 +73,7 @@ int init()
         return -ENODEV;
     }
 
+#if DT_NODE_EXISTS(DT_ALIAS(led0))
     if (!gpio_is_ready_dt(&led)) {
         return -ENODEV;
     }
@@ -77,8 +81,7 @@ int init()
     if (gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE) < 0) {
         return -ENODEV;
     }
-
-#if defined(CONFIG_OPENCV_LIB)
+#endif
 
     cv::setNumThreads(1);
     cv::setUseOptimized(false);
@@ -92,8 +95,6 @@ int init()
         return -3;
     }
 
-#endif /* defined(CONFIG_OPENCV_LIB) */
-
     Video::setup();
 
     dummy_canvas = lv_canvas_create(NULL);
@@ -105,17 +106,14 @@ int init()
 
     screen = lv_img_create(lv_scr_act());
 
-#if defined(CONFIG_OPENCV_LIB)
     ROIRectFace = allocLvROIRect(lv_scr_act(), 4);
     ROIRectSmile = allocLvROIRect(lv_scr_act(), 2);
-#endif
 
     return 0;
 }
 
 int loop()
 {
-
     struct video_buffer vbuf{};
     struct video_buffer *vbuf_ptr = &vbuf;
     struct jpeg_out_prop jpeg_prop;
@@ -137,21 +135,15 @@ int loop()
 
     jpeg_color_convert_helper(jpeg_dev, &jpeg_prop, vbuf_ptr->buffer, fullFrameBuffer);
 
-#if !defined(CONFIG_OPENCV_LIB)
+    cropFullFrameToRoi(dummy_canvas, fullFrameBuffer, roiFrameBuffer,
+                       lvgl::Size(FULL_FRAME_WIDTH, FULL_FRAME_HEIGHT),
+                       lvgl::Size(ROI_FRAME_WIDTH, ROI_FRAME_HEIGHT),
+                        FULL_FRAME_COLOR_FORMAT, LV_COLOR_FORMAT_L8, FULL_FRAME_FLIP_Y);
 
-    cropFullFrameToRoi(dummy_canvas, fullFrameBuffer, roiFrameBuffer);
-    fitRoiFrameToThumbnail(screen_canvas, roiFrameBuffer, thumbnailFrameBuffer);
-    lv_task_handler();
-
-    err = video_enqueue(video_dev, vbuf_ptr);
-    if (err) {
-        LOG_ERR("Unable to requeue video buf");
-        return 0;
-    }
-#else /* !defined(CONFIG_OPENCV_LIB) */
-
-    cropFullFrameToRoi(dummy_canvas, fullFrameBuffer, roiFrameBuffer);
-    fitRoiFrameToThumbnail(screen_canvas, roiFrameBuffer, thumbnailFrameBuffer);
+    fitRoiFrameToThumbnail(screen_canvas, roiFrameBuffer, thumbnailFrameBuffer,
+                        lvgl::Size(ROI_FRAME_WIDTH, ROI_FRAME_HEIGHT),
+                        lvgl::Size(THUMBNAIL_FRAME_WIDTH, THUMBNAIL_FRAME_HEIGHT),
+                        LV_COLOR_FORMAT_L8, LV_COLOR_FORMAT_L8);
     lv_task_handler();
 
     // Return buffer back, we don't need it anymore, thank you
@@ -171,39 +163,49 @@ int loop()
     std::vector<cv::Rect> faces;
     std::vector<cv::Rect> smiles;
 
-    std::vector<cv::Rect> objects = detectFaceAndSmile(
+    detectFaceAndSmile(
         faceCascade,
         smileCascade,
         matGraySmall,
         matGrayFull,
         faceROIMax,
         faces,
-        smiles
+        smiles,
+        smileROIGamma
     );
 
+    if (!faces.empty() && smiles.empty()) {
+        smileROIGamma += 0.1f;
+        if (smileROIGamma > smileROIGammaMax) {
+            smileROIGamma = smileROIGammaMin;
+        }
+    }
+    cv::Rect face, smile;
     if (faces.size()) {
         lv_obj_remove_flag(ROIRectFace, LV_OBJ_FLAG_HIDDEN);
 
-        auto object = faces[0];
-        lv_obj_align_to(ROIRectFace, screen_canvas, LV_ALIGN_TOP_LEFT, object.x, object.y);
-        lv_obj_set_size(ROIRectFace, object.width, object.height);
+        face = faces[0];
+        lv_obj_align_to(ROIRectFace, screen_canvas, LV_ALIGN_TOP_LEFT, face.x, face.y);
+        lv_obj_set_size(ROIRectFace, face.width, face.height);
 
     } else {
         lv_obj_add_flag(ROIRectFace, LV_OBJ_FLAG_HIDDEN);
     }
 
     if (smiles.size()) {
-        auto object = smiles[0];
-        lv_obj_align_to(ROIRectSmile, screen_canvas, LV_ALIGN_TOP_LEFT, object.x, object.y);
-        lv_obj_set_size(ROIRectSmile, object.width, object.height);
+        smile = smiles[0];
+        if ((smile & face).area() != 0) {
+            lv_obj_align_to(ROIRectSmile, screen_canvas, LV_ALIGN_TOP_LEFT, smile.x, smile.y);
+            lv_obj_set_size(ROIRectSmile, smile.width, smile.height);
 
-        lv_obj_remove_flag(ROIRectSmile, LV_OBJ_FLAG_HIDDEN);
-
-        gpio_pin_set_dt(&led, 0);
+            lv_obj_remove_flag(ROIRectSmile, LV_OBJ_FLAG_HIDDEN);
+#if DT_NODE_EXISTS(DT_ALIAS(led0))
+            gpio_pin_set_dt(&led, 0);
+#endif
+        }
     } else {
         lv_obj_add_flag(ROIRectSmile, LV_OBJ_FLAG_HIDDEN);
     }
 
-#endif /* !defined(CONFIG_OPENCV_LIB) */
     return 0;
 }

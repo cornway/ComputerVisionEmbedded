@@ -16,12 +16,12 @@ configure_file(
     @ONLY
 )
 
-set(OPENCV_UTILS_DIR_PATH "../u5/app/src")
+set(OPENCV_UTILS_DIR_PATH "../u5/common/opencv")
 
 set(HOST_APP_SRCS
     Src/main.cpp
-    ${OPENCV_UTILS_DIR_PATH}/opencv_utils.cpp
-    ${OPENCV_UTILS_DIR_PATH}/opencv_utils.hpp
+    ${OPENCV_UTILS_DIR_PATH}/src/opencv_utils.cpp
+    ${OPENCV_UTILS_DIR_PATH}/include/gf/opencv_utils.hpp
 )
 
 # Add executable
@@ -31,6 +31,6 @@ add_executable(host_app ${HOST_APP_SRCS})
 target_include_directories(host_app
     PRIVATE "${CMAKE_BINARY_DIR}/Include"
     PRIVATE ${OpenCV_INCLUDE_DIRS}
-    PRIVATE ${OPENCV_UTILS_DIR_PATH})
+    PRIVATE ${OPENCV_UTILS_DIR_PATH}/include)
 
 target_link_libraries(host_app PRIVATE ${OpenCV_LIBS})

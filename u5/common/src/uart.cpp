@@ -7,7 +7,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/printk.h>
 
-#include "uart.hpp"
+#include "gf/uart.hpp"
 
 LOG_MODULE_REGISTER(uart);
 

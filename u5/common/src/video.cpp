@@ -5,7 +5,7 @@
 #include <zephyr/drivers/display.h>
 #include <zephyr/logging/log.h>
 
-#include "video.hpp"
+#include "gf/video.hpp"
 
 #define LOG_LEVEL CONFIG_LOG_DEFAULT_LEVEL
 #include <zephyr/logging/log.h>

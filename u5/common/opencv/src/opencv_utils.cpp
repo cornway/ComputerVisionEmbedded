@@ -7,7 +7,7 @@
 #include <cstring>
 #include <iostream>
 
-#include "opencv_utils.hpp"
+#include "gf/opencv_utils.hpp"
 
 bool loadCascade(cv::CascadeClassifier &cascade, const char *path) {
     if (!cascade.load(path)) {
@@ -53,41 +53,63 @@ cv::Mat cv_preprocessForQR(const cv::Mat& bgr) {
     return bin;
 }
 
-std::vector<cv::Rect> detectFaceAndSmile(
+static cv::Mat preprocessSmileROI(const cv::Mat& grayROI, float gamma) {
+    // 1) CLAHE for local contrast (great in dim light)
+    cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(5.0, cv::Size(4,4));
+    cv::Mat claheROI, bfROI;
+    clahe->apply(grayROI, claheROI);
+
+    // 2) Denoise but keep edges
+    cv::bilateralFilter(claheROI, bfROI, 3, 20, 50);
+
+    // 3) Gamma lift (power-law)
+    bfROI.convertTo(bfROI, CV_32FC1, 1.0/255.0);
+    cv::pow(bfROI, gamma, bfROI);
+    bfROI.convertTo(bfROI, CV_8UC1, 255.0);
+
+    // 4) Light unsharp mask to emphasize edges
+    cv::Mat blurImg;
+    cv::GaussianBlur(bfROI, blurImg, cv::Size(0,0), 1.0);
+    cv::addWeighted(bfROI, 1.5, blurImg, -0.5, 0, bfROI);
+
+    return bfROI;
+}
+
+cv::Mat detectFaceAndSmile(
     cv::CascadeClassifier &faceCascade,
     cv::CascadeClassifier &smileCascade,
     cv::Mat &thumbnailFrame,
     cv::Mat &fullFrame,
     cv::Rect &faceROIMax,
     std::vector<cv::Rect> &faceROIs,
-    std::vector<cv::Rect> &smileROIs) {
-
-    std::vector<cv::Rect> outROIs;
+    std::vector<cv::Rect> &smileROIs,
+    float mouthGamma) {
 
     const double scaleFactor = 1.04;
     const int minNeighbors = 3;
-    const int flags = 0;
+    const int flags = cv::CASCADE_FIND_BIGGEST_OBJECT | cv::CASCADE_DO_ROUGH_SEARCH;
+    cv::Mat smilePostProc;
 
+    //cv::equalizeHist(thumbnailFrame, thumbnailFrame);
     faceCascade.detectMultiScale(thumbnailFrame, faceROIs, scaleFactor, minNeighbors,
                                 flags);
 
     for (auto & faceROI : faceROIs) {
-        outROIs.push_back(faceROI);
 
         try {
 
             cv::Rect faceROIFull = remapROI(faceROI, thumbnailFrame, fullFrame);
 
             /* Get lower half/third of face ROI + some gap where the smile is most likelly to be */
-            const uint32_t offset = (faceROIFull.height * 2) / 3;
-            faceROIFull.y = faceROIFull.y + offset;
+            const uint32_t offset_y = (faceROIFull.height * 2) / 3;
+
+            faceROIFull.y = faceROIFull.y + offset_y - 10;
             faceROIFull.height = faceROIFull.height - faceROIFull.height / 2;
             if (faceROIFull.height + faceROIFull.y > fullFrame.rows) {
                 faceROIFull.height = fullFrame.rows - faceROIFull.y;
             }
 
             cv::Rect roiThumb = remapROI(faceROIFull, fullFrame, thumbnailFrame);
-            outROIs.push_back(roiThumb);
 
             float sx = 1.0f;
             float sy = 1.0f;
@@ -104,10 +126,14 @@ std::vector<cv::Rect> detectFaceAndSmile(
                 faceROIFrameResized = faceROIFrame;
             }
 
-            const double scaleFactor = 1.05;
+            const double scaleFactor = 1.1;
             const int minNeighbors = 3;
-            const int flags = 0;
+            const int flags = cv::CASCADE_FIND_BIGGEST_OBJECT | cv::CASCADE_DO_ROUGH_SEARCH;
 
+            //cv::equalizeHist(faceROIFrameResized, faceROIFrameResized);
+            faceROIFrameResized = preprocessSmileROI(faceROIFrameResized, mouthGamma);
+
+            smilePostProc = faceROIFrameResized.clone();
             smileCascade.detectMultiScale(faceROIFrameResized, smileROIs, scaleFactor, minNeighbors,
                                         flags);
 
@@ -118,7 +144,6 @@ std::vector<cv::Rect> detectFaceAndSmile(
                 cv::Rect smileROIRemapped = translateScaleROI(smileROI, 1.0f / sx, 1.0f / sy, faceROIFull.x, faceROIFull.y);
                 smileROIRemapped = translateScaleROI(smileROIRemapped, ssx_inv, ssy_inv, 0.0f, 0.0f);
 
-                outROIs.push_back(smileROIRemapped);
                 smileROI = smileROIRemapped;
             }
 
@@ -129,7 +154,7 @@ std::vector<cv::Rect> detectFaceAndSmile(
         }
     }
 
-    return outROIs;
+    return smilePostProc;
 }
 
 cv::Rect remapROI(cv::Rect &ROI, cv::Mat &inFrame, cv::Mat &outFrame) {

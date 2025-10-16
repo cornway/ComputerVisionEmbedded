@@ -120,10 +120,12 @@ void HAL_JPEG_ErrorCallback(JPEG_HandleTypeDef *hjpeg) {
 void HAL_JPEG_DecodeCpltCallback(JPEG_HandleTypeDef *hjpeg) {
   struct jpeg_hw_data *data = CONTAINER_OF(hjpeg, struct jpeg_hw_data, hjpeg);
 
-  atomic_set(&data->data_ready, 1);
   if (data->parent_dev && data->cplt_callback) {
     data->cplt_callback(data->parent_dev);
   }
+  atomic_set(&data->data_ready, 1);
+
+  // LOG_INF("HAL_JPEG_DecodeCpltCallback");
 }
 
 static void dma_callback(const struct device *dma_dev, void *arg,

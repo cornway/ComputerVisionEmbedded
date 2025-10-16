@@ -3,7 +3,7 @@
 
 #include "HaarPath.hpp"
 
-#include "opencv_utils.hpp"
+#include "gf/opencv_utils.hpp"
 
 cv::String haarPath = HAAR_PATH;
 cv::String face_cascade_name = haarPath + "lbpcascades/lbpcascade_frontalface_improved.xml";
@@ -11,6 +11,19 @@ cv::String smile_cascade_name = haarPath + "haarcascades/haarcascade_smile.xml";
 cv::CascadeClassifier face_cascade;
 cv::CascadeClassifier smile_cascade;
 cv::String window_name = "Capture - Face detection";
+cv::String window_name_2 = "Capture - Smile detection";
+
+
+bool checkFrameSizeSupported(cv::Mat &gray) {
+	if (gray.cols == 640 && gray.rows == 480) {
+		return true;
+	}
+
+	if (gray.cols == 320 && gray.rows == 240) {
+		return true;
+	}
+	return false;
+}
 
 int main(int, char**) {
     // open the first webcam plugged in the computer
@@ -39,6 +52,8 @@ int main(int, char**) {
     // display the frame until you press a key
 
 	std::cout << "Start capturing" << std::endl;
+	float gamma = 0.1;
+	std::map<float, uint32_t> gammaScore;
 	while (camera.read(frameOriginal)) {
 
 		if (frameOriginal.empty())
@@ -51,15 +66,23 @@ int main(int, char**) {
 		cv::cvtColor(frameOriginal, frameOriginalGray, cv::COLOR_BGR2GRAY);
 		//cv::equalizeHist(frameOriginalGray, frameOriginalGray);
 
+		if (false == checkFrameSizeSupported(frameOriginalGray)) {
+			std::cerr << "Not supported frame size" << std::endl;
+			exit(-1);
+		}
+
 		cv::Mat frameCroppedGray;
 
-		cv::Rect crop;
-		crop.x = (frameOriginalGray.cols - 320) / 2;
-		crop.width = 320;
-		crop.y = (frameOriginalGray.rows - 240) / 2;
-		//crop.y = 240;
-		crop.height = 240;
-		frameCroppedGray = frameOriginalGray(crop);
+		if (frameOriginalGray.cols == 640 && frameOriginalGray.rows == 480) {
+			cv::Rect crop;
+			crop.width = 320;
+			crop.height = 240;
+			crop.x = (frameOriginalGray.cols - crop.width) / 2;
+			crop.y = (frameOriginalGray.rows - crop.height) / 2;
+			frameCroppedGray = frameOriginalGray(crop);
+		} else {
+			frameCroppedGray = frameOriginalGray;
+		}
 
 		cv::Rect faceROIMax{};
 		faceROIMax.width = 64;
@@ -69,15 +92,31 @@ int main(int, char**) {
 
 		std::vector<cv::Rect> faces, smiles;
 
-		std::vector<cv::Rect> ROIs = detectFaceAndSmile(
+		cv::Mat smilePostProc = detectFaceAndSmile(
 			face_cascade,
 			smile_cascade,
 			frameScreenGray,
 			frameCroppedGray,
 			faceROIMax,
 			faces,
-			smiles
+			smiles,
+			gamma
 		);
+
+		if (!faces.empty() && !smiles.empty()) {
+			if (gammaScore.count(gamma)) {
+				gammaScore[gamma] = gammaScore[gamma] + 1;
+			} else {
+				gammaScore[gamma] = 1;
+			}
+		}
+
+		if (!faces.empty() && smiles.empty()) {
+			gamma += 0.1;
+			if (gamma >= 1.0) {
+				gamma = 0.1;
+			}
+		}
 
 		for (const auto &ROI : faces) {
 			rectangle(frameScreenGray, ROI, cv::Scalar(0, 0, 255), 1, 1, 0);
@@ -86,10 +125,18 @@ int main(int, char**) {
 			rectangle(frameScreenGray, ROI, cv::Scalar(0, 0, 255), 1, 1, 0);
 		}
 
+		if (smilePostProc.cols && smilePostProc.rows) {
+			cv::imshow(window_name_2, smilePostProc);
+		}
 		cv::imshow(window_name, frameScreenGray);
+
 		int c = cv::waitKey(100);
-    	if ((char)c == 27) { return 0; }
+    	if ((char)c == 27) { break; }
     }
+
+	for (auto & [gamma, score] : gammaScore) {
+		std::cout << "gamma = " << gamma << ", score = " << score << std::endl;
+	}
 
     return 0;
 }

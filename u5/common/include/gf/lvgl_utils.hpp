@@ -6,14 +6,14 @@
 
 #include <lvgl.h>
 
-namespace Gfx {
+namespace lvgl {
 
-struct GfxRect {
-  uint32_t x, y;
+struct Size {
+  Size (uint32_t w, uint32_t h) : width(w), height(h) {}
   uint32_t width, height;
 };
 
-struct GfxBuffer {
+struct Buffer {
   uint8_t *buf;
   uint32_t width, height, stride;
   size_t size;
@@ -24,6 +24,6 @@ struct GfxBuffer {
  * @brief Fit source buffer onto destination
  *
  */
-void fit(lv_obj_t *canvas, const GfxBuffer &src, const GfxBuffer &dst, bool flip_y = false);
+void fit(lv_obj_t *canvas, const Buffer &src, const Buffer &dst, bool flip_y = false);
 
 } // namespace Gfx
