@@ -1,0 +1,8 @@
+
+
+module = grinreflex
+module-str = grinreflex
+
+source "subsys/logging/Kconfig.template.log_config"
+source "samples/subsys/usb/common/Kconfig.sample_usbd"
+source "Kconfig.zephyr"

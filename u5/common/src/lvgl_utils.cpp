@@ -1,9 +1,9 @@
 
-#include "gfx_utils.hpp"
+#include "gf/lvgl_utils.hpp"
 
-namespace Gfx {
+namespace lvgl {
 
-void fit(lv_obj_t *canvas, const GfxBuffer &src, const GfxBuffer &dst, bool flip_y) {
+void fit(lv_obj_t *canvas, const Buffer &src, const Buffer &dst, bool flip_y) {
 
   lv_image_dsc_t src_img = {
       .header =

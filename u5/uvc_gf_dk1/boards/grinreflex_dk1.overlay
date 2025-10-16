@@ -10,13 +10,13 @@
 / {
 	chosen: chosen {
 		zephyr,spi1 = &spi1;
+		zephyr,usart2 = &usart2;
+	};
+	uvc: uvc {
+		compatible = "zephyr,uvc-device";
 	};
 };
 
 &gpdma1 {
 	status = "okay";
-};
-
-&dcmi {
-	jpeg-dev = <&jpeg0>;
 };

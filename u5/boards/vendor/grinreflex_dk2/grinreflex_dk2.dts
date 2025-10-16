@@ -21,6 +21,8 @@
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
 		zephyr,code-partition = &slot0_partition;
+		zephyr,nema = &nema0;
+		zephyr,jpeg = &jpeg0;
 		zephyr,display = &st7735r_160x80;
 		zephyr,camera = &zephyr_camera_dvp;
 	};
@@ -101,6 +103,19 @@
 			   <20 0 &gpioc 9  0>,  /* DVP_D3 */
 			   <21 0 &gpioc 7  0>,  /* DVP_D1 */
 			   <22 0 &gpioc 8  0>;  /* DVP_D2 */
+	};
+
+	nema0: nema-gfx {
+		compatible = "st,nema-gfx";
+		status = "okay";
+	};
+
+	jpeg0: jpeg_hw {
+		compatible = "st,jpeg-hw";
+		dmas = <&gpdma1 2 125 (STM32_DMA_PERIPH_RX | STM32_DMA_PERIPH_32BITS | STM32_DMA_MEM_32BITS)
+				&gpdma1 3 124 (STM32_DMA_PERIPH_TX | STM32_DMA_PERIPH_32BITS | STM32_DMA_MEM_32BITS)>;
+		dma-names = "tx", "rx";
+		status = "okay";
 	};
 
 };

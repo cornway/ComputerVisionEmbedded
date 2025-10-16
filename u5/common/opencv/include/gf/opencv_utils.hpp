@@ -22,16 +22,17 @@ bool loadCascade(cv::CascadeClassifier &cascade, const uint8_t *buffer, size_t l
  * @param faceROIMax maximum faceROI to be resized to if detected ROI is largen than this
  * @param faces vector with faces rects
  * @param smiles vector with sniles rects
- * @return std::vector<cv::Rect> all ROI's ever considered during run
+ * @return cv::Mat smile ROI ever considered during run
  */
-std::vector<cv::Rect> detectFaceAndSmile(
+cv::Mat  detectFaceAndSmile(
     cv::CascadeClassifier &faceCascade,
     cv::CascadeClassifier &smileCascade,
     cv::Mat &thumbnailFrame,
     cv::Mat &fullFrame,
     cv::Rect &faceROIMax,
     std::vector<cv::Rect> &faces,
-    std::vector<cv::Rect> &smiles
+    std::vector<cv::Rect> &smiles,
+    float mouthGamma
 );
 
 cv::Mat cv_preprocessForQR(const cv::Mat& bgr);

@@ -6,6 +6,8 @@
 
 cmake_minimum_required(VERSION 3.13.1)
 
+message(FATAL_ERROR This application is deprecated, please use uvc_gf_dk1 / gf_dkx / ...)
+
 set(EXTRA_CONF_FILE
     ${CMAKE_CURRENT_SOURCE_DIR}/lvgl.conf;
 )
