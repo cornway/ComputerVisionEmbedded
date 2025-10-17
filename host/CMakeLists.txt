@@ -21,7 +21,9 @@ set(OPENCV_UTILS_DIR_PATH "../u5/common/opencv")
 set(HOST_APP_SRCS
     Src/main.cpp
     ${OPENCV_UTILS_DIR_PATH}/src/opencv_utils.cpp
+    ${OPENCV_UTILS_DIR_PATH}/src/opencv_pipeline.cpp
     ${OPENCV_UTILS_DIR_PATH}/include/gf/opencv_utils.hpp
+    ${OPENCV_UTILS_DIR_PATH}/include/gf/opencv_pipeline.hpp
 )
 
 # Add executable

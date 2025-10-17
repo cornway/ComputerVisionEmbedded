@@ -9,7 +9,7 @@
 namespace lvgl {
 
 struct Size {
-  Size (uint32_t w, uint32_t h) : width(w), height(h) {}
+  Size(uint32_t w, uint32_t h) : width(w), height(h) {}
   uint32_t width, height;
 };
 
@@ -24,6 +24,7 @@ struct Buffer {
  * @brief Fit source buffer onto destination
  *
  */
-void fit(lv_obj_t *canvas, const Buffer &src, const Buffer &dst, bool flip_y = false);
+void fit(lv_obj_t *canvas, const Buffer &src, const Buffer &dst,
+         bool flip_y = false);
 
-} // namespace Gfx
+} // namespace lvgl

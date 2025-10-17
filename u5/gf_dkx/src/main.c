@@ -4,13 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <zephyr/kernel.h>
+#include <lvgl.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/display.h>
-#include <zephyr/drivers/video.h>
 #include <zephyr/drivers/video-controls.h>
+#include <zephyr/drivers/video.h>
+#include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <lvgl.h>
 
 #define CONFIG_VIDEO_WIDTH 160
 #define CONFIG_VIDEO_HEIGHT 120
@@ -27,12 +27,10 @@ LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 #error No display chosen in devicetree. Missing "--shield" flag?
 #endif
 
-int main(void)
-{
-	init();
+int main(void) {
+  init();
 
-	while (1)
-	{
-		loop();
-	}
+  while (1) {
+    loop();
+  }
 }

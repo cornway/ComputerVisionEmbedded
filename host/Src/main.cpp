@@ -11,8 +11,9 @@ cv::String smile_cascade_name = haarPath + "haarcascades/haarcascade_smile.xml";
 cv::CascadeClassifier face_cascade;
 cv::CascadeClassifier smile_cascade;
 cv::String window_name = "Capture - Face detection";
-cv::String window_name_2 = "Capture - Smile detection";
+cv::String window_name_smile = "Smile";
 
+using namespace gf_cv;
 
 bool checkFrameSizeSupported(cv::Mat &gray) {
 	if (gray.cols == 640 && gray.rows == 480) {
@@ -48,12 +49,12 @@ int main(int, char**) {
 		return -1;
 	};
     
-    cv::namedWindow(window_name, 2);
+    cv::namedWindow(window_name, cv::WND_PROP_ASPECT_RATIO);
     // display the frame until you press a key
 
 	std::cout << "Start capturing" << std::endl;
-	float gamma = 0.1;
-	std::map<float, uint32_t> gammaScore;
+	ROIKernelParamsSweep smileROIKernelParams;
+	std::map<std::string, uint32_t> smileROIKernelParamsScore;
 	while (camera.read(frameOriginal)) {
 
 		if (frameOriginal.empty())
@@ -86,56 +87,110 @@ int main(int, char**) {
 
 		cv::Rect faceROIMax{};
 		faceROIMax.width = 64;
-		faceROIMax.height = 64;
+		faceROIMax.height = 40;
 
 		cv::resize(frameCroppedGray, frameScreenGray, cv::Size(80, 80), 0.0f, 0.0f, cv::INTER_NEAREST );
 
 		std::vector<cv::Rect> faces, smiles;
 
-		cv::Mat smilePostProc = detectFaceAndSmile(
+		smileROIKernelParams.clahe.clipLimit = Range<float>{4.0, 4.0, 1.0};
+		smileROIKernelParams.clahe.tileSize = Range<int>{4, 4, 1};
+		smileROIKernelParams.biFilter.d = Range<int>{3, 3, 1};
+		smileROIKernelParams.biFilter.sigmaColor = Range<float>{10.0, 10.0, 1.0};
+		smileROIKernelParams.biFilter.sigmaSpace = Range<float>{50.0, 50.0, 1.0};
+		smileROIKernelParams.gamma.gamma = Range<float>{0.44, 0.50, 0.02};
+		smileROIKernelParams.blur.sigmaX = Range<float>{0.82, 0.87, 0.01};
+
+		auto rects = detectFaceAndSmile(
 			face_cascade,
 			smile_cascade,
 			frameScreenGray,
 			frameCroppedGray,
 			faceROIMax,
-			faces,
-			smiles,
-			gamma
+			smileROIKernelParams
 		);
 
-		if (!faces.empty() && !smiles.empty()) {
-			if (gammaScore.count(gamma)) {
-				gammaScore[gamma] = gammaScore[gamma] + 1;
-			} else {
-				gammaScore[gamma] = 1;
-			}
+		for (const auto &rect : rects) {
+			rectangle(frameScreenGray, rect, cv::Scalar(0, 0, 255), 1, 1, 0);
 		}
 
-		if (!faces.empty() && smiles.empty()) {
-			gamma += 0.1;
-			if (gamma >= 1.0) {
-				gamma = 0.1;
-			}
-		}
-
-		for (const auto &ROI : faces) {
-			rectangle(frameScreenGray, ROI, cv::Scalar(0, 0, 255), 1, 1, 0);
-		}
-		for (const auto &ROI : smiles) {
-			rectangle(frameScreenGray, ROI, cv::Scalar(0, 0, 255), 1, 1, 0);
-		}
-
-		if (smilePostProc.cols && smilePostProc.rows) {
-			cv::imshow(window_name_2, smilePostProc);
-		}
 		cv::imshow(window_name, frameScreenGray);
 
-		int c = cv::waitKey(100);
-    	if ((char)c == 27) { break; }
+		int c = cv::waitKey(1);
+		if ((char)c == 27) { break; }
+
+		continue;
+
+#if 0
+		if (faces.empty()) {
+			continue;
+		}
+
+		const double scaleFactor = 1.1;
+		const int minNeighbors = 3;
+		const int flags = cv::CASCADE_FIND_BIGGEST_OBJECT | cv::CASCADE_DO_ROUGH_SEARCH;
+
+		std::vector<float> claheClipLimit_V({4.0});
+		std::vector<int> claheTileSize_V({4});
+		std::vector<int> biFilterD_V({3});
+		std::vector<int> biFilterSigmaColor_V({20, 22, 24, 26, 28, 20});
+		std::vector<int> biFilterSigmaSpace_V({50});
+		std::vector<float> gammaGamma_V({0.45, 0.47, 0.49, 0.50, 0.52, 0.54, 0.56, 0.58, 0.60, 0.62, 0.65});
+		std::vector<float> blurSigmaX_V({0.85, 0.86, 0.87, 0.88, 0.89, 0.90, 0.91, 0.92, 0.93, 0.94, 0.95});
+
+		for (auto claheClipLimit : claheClipLimit_V) {
+			for (auto claheTileSize : claheTileSize_V) {
+				for (auto biFilterD : biFilterD_V) {
+					for (auto biFilterSigmaColor : biFilterSigmaColor_V) {
+						for (auto biFilterSigmaSpace : biFilterSigmaSpace_V) {
+							for (auto gammaGamma : gammaGamma_V) {
+								for (auto blurSigmaX : blurSigmaX_V) {
+									smileROIKernelParams.clahe.clipLimit = claheClipLimit;
+									smileROIKernelParams.clahe.tileSize = claheTileSize;
+									smileROIKernelParams.biFilter.d = biFilterD;
+									smileROIKernelParams.biFilter.sigmaColor = biFilterSigmaColor;
+									smileROIKernelParams.biFilter.sigmaSpace = biFilterSigmaSpace;
+									smileROIKernelParams.gamma.gamma = gammaGamma;
+									smileROIKernelParams.blur.sigmaX = blurSigmaX;
+
+									smileROIMat = preprocessSmileROI(smileROIMat, smileROIKernelParams);
+									std::vector<cv::Rect> smiles;
+									smile_cascade.detectMultiScale(smileROIMat, smiles, scaleFactor, minNeighbors,
+																flags);
+
+									if (!smiles.empty()) {
+										std::string key;
+										key += "clahe.clipLimit=" + std::to_string(smileROIKernelParams.clahe.clipLimit) + ":";
+										key += "clahe.tileSize=" + std::to_string(smileROIKernelParams.clahe.tileSize) + ":";
+										key += "biFilter.d=" + std::to_string(smileROIKernelParams.biFilter.d) + ":";
+										key += "biFilter.sigmaColor=" + std::to_string(smileROIKernelParams.biFilter.sigmaColor) + ":";
+										key += "biFilter.sigmaSpace=" + std::to_string(smileROIKernelParams.biFilter.sigmaSpace) + ":";
+										key += "gamma.gamma=" + std::to_string(smileROIKernelParams.gamma.gamma) + ":";
+										key += "blur.sigmaX=" + std::to_string(smileROIKernelParams.blur.sigmaX);
+
+										auto it = smileROIKernelParamsScore.try_emplace(key, 1);
+										if (!it.second) {
+											auto &node = *it.first;
+											node.second += 1;
+										}
+
+										//cv::imshow(window_name_2, smileROIMat);
+										//cv::waitKey(100);
+										break;
+									}
+
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+#endif
     }
 
-	for (auto & [gamma, score] : gammaScore) {
-		std::cout << "gamma = " << gamma << ", score = " << score << std::endl;
+	for (auto & [key, score] : smileROIKernelParamsScore) {
+		std::cout << "key = " << key << ", score = " << score << std::endl;
 	}
 
     return 0;

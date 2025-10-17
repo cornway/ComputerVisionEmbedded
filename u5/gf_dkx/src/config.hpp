@@ -2,7 +2,6 @@
 
 #pragma once
 
-
 #if !defined(CONFIG_GRINREFLEX_JPEG_VIDEO)
 #error "Not supported yet"
 #endif
@@ -33,4 +32,4 @@
 #define THUMBNAIL_FRAME_WIDTH 80
 #define THUMBNAIL_FRAME_HEIGHT 80
 
-#define FULL_FRAME_FLIP_Y (1)
+#define FULL_FRAME_FLIP_Y (0)
