@@ -7,6 +7,7 @@ zephyr_compile_options(-DOPENCV_FLANN_USE_STD_RAND)
 
 target_sources(app PRIVATE
     src/opencv_utils.cpp
+    src/opencv_pipeline.cpp
 )
 
 set(OPENCV_LBP_CASCADES ${OPENCV_INSTALL_DIR}/share/opencv4/lbpcascades)

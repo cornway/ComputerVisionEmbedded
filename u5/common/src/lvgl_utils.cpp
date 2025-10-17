@@ -33,7 +33,7 @@ void fit(lv_obj_t *canvas, const Buffer &src, const Buffer &dst, bool flip_y) {
 
   if (flip_y) {
     img_dsc.rotation = 1800;
-    img_dsc.pivot.x = src.width  / 2;
+    img_dsc.pivot.x = src.width / 2;
     img_dsc.pivot.y = src.height / 2;
   }
 
@@ -44,4 +44,4 @@ void fit(lv_obj_t *canvas, const Buffer &src, const Buffer &dst, bool flip_y) {
   lv_canvas_finish_layer(canvas, &layer);
 }
 
-} // namespace Gfx
+} // namespace lvgl
