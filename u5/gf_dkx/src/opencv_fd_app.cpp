@@ -36,9 +36,12 @@ LOG_MODULE_REGISTER(grinreflex_app);
 using namespace gf_cv;
 
 static const struct device *video_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_camera));
+
 static const struct device *display_dev =
     DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
+
 const struct device *jpeg_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_jpeg));
+
 #if DT_NODE_EXISTS(DT_ALIAS(led0))
 static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 #endif
@@ -54,7 +57,6 @@ static uint8_t
 
 static lv_obj_t *screen_canvas;
 static lv_obj_t *dummy_canvas;
-static lv_obj_t *screen;
 
 static lv_obj_t *ROIRectFace;
 static lv_obj_t *ROIRectSmile;
@@ -108,8 +110,6 @@ int init() {
   lv_obj_center(screen_canvas);
 
   display_blanking_off(display_dev);
-
-  screen = lv_img_create(lv_scr_act());
 
   ROIRectFace =
       allocLvROIRect(lv_scr_act(), 4, lv_palette_main(LV_PALETTE_GREEN));
@@ -171,26 +171,29 @@ int loop() {
 
   // This is the best configuration I could find, 64 x 30 works even better
   // But that may miss smile area
-  cv::Rect faceROIMax(0, 0, 64, 40);
+  auto smileCascadeSize = smileCascade.getOriginalWindowSize();
+  cv::Rect faceROIMax(0, 0, smileCascadeSize.width * 2,
+                      smileCascadeSize.height * 2);
 
-  auto sigmaX = Range<float>{0.75, 0.85, 0.05};
+  auto sigmaX = Range<float>{0.85, 0.85, 0.01};
   BlurStage blurStage = BlurStage(sigmaX);
 
-  auto _gamma = Range<float>{0.35, 0.55, 0.05};
+  auto _gamma = Range<float>{0.30, 0.50, 0.05};
   GammaStage gammaStage = GammaStage(_gamma);
 
   auto d = Range<int>{3, 3, 1};
-  auto sigmaColor = Range<float>{10.0, 30.0, 10.0};
+  auto sigmaColor = Range<float>{20.0, 20.0, 10.0};
   auto sigmaSpace = Range<float>{50.0, 50.0, 1.0};
   BilateralStage bilateralStage = BilateralStage(d, sigmaColor, sigmaSpace);
 
-  auto clipLimit = Range<float>{4.0, 4.0, 1.0};
+  auto clipLimit = Range<float>{5.0, 5.0, 1.0};
   auto tileSize = Range<int>{4, 4, 1};
   ClaheStage claheStage = ClaheStage(clipLimit, tileSize);
-  claheStage.setNextStage(&bilateralStage);
-  bilateralStage.setNextStage(&gammaStage);
-  gammaStage.setNextStage(nullptr);
-  // blurStage.setNextStage(nullptr);
+
+  claheStage.setNextStage(&bilateralStage)
+      .setNextStage(&gammaStage)
+      .setNextStage(&blurStage)
+      .setNextStage(nullptr);
 
   cv::equalizeHist(matGraySmall, matGraySmall);
   auto rects = detectFaceAndSmile(faceCascade, smileCascade, matGraySmall,
@@ -218,7 +221,7 @@ int loop() {
 
       lv_obj_remove_flag(ROIRectSmile, LV_OBJ_FLAG_HIDDEN);
 #if DT_NODE_EXISTS(DT_ALIAS(led0))
-      gpio_pin_set_dt(&led, 0);
+      gpio_pin_toggle_dt(&led);
 #endif
     }
   } else {

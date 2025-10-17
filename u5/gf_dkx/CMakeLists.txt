@@ -10,6 +10,10 @@ set(EXTRA_CONF_FILE
     ${CMAKE_CURRENT_SOURCE_DIR}/lvgl.conf;
 )
 
+if (CONFIG_VARIANT_RELEASE)
+set(DTC_OVERLAY_FILE ${DTC_OVERLAY_FILE};${CMAKE_CURRENT_SOURCE_DIR}/overlays/release.overlay CACHE STRING "" FORCE)
+endif()
+
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
 project(gf_dkx)

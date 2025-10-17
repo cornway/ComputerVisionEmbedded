@@ -1,0 +1,14 @@
+
+/ {
+
+	chosen {
+		zephyr,display = &zephyr_dc;
+	};
+
+	zephyr_dc: zephyr_dc {
+		compatible = "zephyr,dummy-dc";
+		width = <80>;
+		height = <80>;
+	};
+
+};

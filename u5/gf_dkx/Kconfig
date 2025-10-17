@@ -55,4 +55,9 @@ config FLASH_LOG_LEVEL
 
 endif # DISK_DRIVER_FLASH
 
+config VARIANT_RELEASE
+	bool "Use release variant, strip everything that is unnecessary"
+	default n
+	depends on BOARD_GRINREFLEX_DK2
+
 endmenu

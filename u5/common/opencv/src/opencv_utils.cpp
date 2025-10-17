@@ -130,11 +130,9 @@ detectFaceAndSmile(cv::CascadeClassifier &faceCascade,
 
       std::vector<cv::Rect> smileRects;
 
-      detectSmile(smileCascade, faceROIFrameResized, smileRects);
-
-      // pipeline.invoke(faceROIFrameResized, [&](cv::Mat &in) -> bool {
-      //   return detectSmile(smileCascade, in, smileRects);
-      // });
+      pipeline.invoke(faceROIFrameResized, [&](cv::Mat &in) -> bool {
+         return detectSmile(smileCascade, in, smileRects);
+      });
 
       // detectSmile(smileCascade, faceROIFrameResized, smileRects,
       //             roIKernelParamsSweep);

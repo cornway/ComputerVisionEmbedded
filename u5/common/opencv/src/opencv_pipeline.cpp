@@ -5,7 +5,7 @@ namespace gf_cv {
 
 Stage &Stage::setNextStage(Stage *_nextStage) {
   nextStage = _nextStage;
-  return *this;
+  return *_nextStage;
 }
 
 bool Stage::invoke(cv::Mat &_in, InvokeCallback callback) {
