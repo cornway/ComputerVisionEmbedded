@@ -103,8 +103,17 @@ int loop() {
   jpeg_color_convert_helper(jpeg_dev, &jpeg_prop, vbuf_ptr->buffer,
                             fullFrameBuffer);
 
-  cropFullFrameToRoi(dummy_canvas, fullFrameBuffer, roiFrameBuffer);
-  fitRoiFrameToThumbnail(screen_canvas, roiFrameBuffer, thumbnailFrameBuffer);
+  cropFullFrameToRoi(dummy_canvas, fullFrameBuffer, roiFrameBuffer,
+                     lvgl::Size(FULL_FRAME_WIDTH, FULL_FRAME_HEIGHT),
+                     lvgl::Size(ROI_FRAME_WIDTH, ROI_FRAME_HEIGHT),
+                     FULL_FRAME_COLOR_FORMAT, LV_COLOR_FORMAT_L8,
+                     FULL_FRAME_FLIP_Y);
+
+  fitRoiFrameToThumbnail(
+      screen_canvas, roiFrameBuffer, thumbnailFrameBuffer,
+      lvgl::Size(ROI_FRAME_WIDTH, ROI_FRAME_HEIGHT),
+      lvgl::Size(THUMBNAIL_FRAME_WIDTH, THUMBNAIL_FRAME_HEIGHT),
+      LV_COLOR_FORMAT_L8, LV_COLOR_FORMAT_L8);
   lv_task_handler();
 
   err = video_enqueue(video_dev, vbuf_ptr);

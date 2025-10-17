@@ -1,12 +1,43 @@
 
-#include "opencv_utils.hpp"
+#include <functional>
+
+#include "opencv2/opencv.hpp"
 
 #pragma once
 
 namespace gf_cv {
 
+template <class T> struct Range {
+  static_assert(std::is_arithmetic<T>::value,
+                "struct Range: T must be arithmetic");
+
+  T start, stop, step;
+
+  struct sentinel {};
+
+  struct iterator {
+    T value, stop, step;
+
+    T operator*() const { return value; };
+    iterator &operator++() {
+      value += step;
+      return *this;
+    }
+    bool operator!=(sentinel) { return value <= stop; }
+    bool operator==(sentinel) { return value > stop; }
+  };
+
+  iterator begin() const {
+    assert(step > T(0) && "Range: step must be > 0");
+    return {start, stop, step};
+  }
+
+  sentinel end() const { return {}; }
+};
+
 class Stage {
 public:
+  using InvokeCallback = std::function<bool(cv::Mat &)>;
   explicit Stage() = default;
   virtual ~Stage() = default;
 
@@ -29,12 +60,30 @@ public:
   virtual cv::Mat get() = 0;
   virtual void next() = 0;
   virtual bool hasNext() = 0;
+
+  Stage &setNextStage(Stage *nextStage);
+  bool invoke(cv::Mat &in, InvokeCallback callback);
+  void setInput(cv::Mat &in);
+
+protected:
+  Stage *nextStage{nullptr};
+  cv::Mat in;
 };
 
+class DummyStage : public Stage {
+public:
+  explicit DummyStage() = default;
+  ~DummyStage() = default;
+  cv::Mat get() override { return cv::Mat(); }
+  void next() override {}
+  bool hasNext() override { return false; }
+};
+
+/* CLAHE */
 class ClaheStage : public Stage {
 public:
-  explicit ClaheStage(cv::Mat &in, Range<float> &clipLimit,
-                      Range<int> &tileSize);
+  explicit ClaheStage(Range<float> &clipLimit, Range<int> &tileSize);
+
   ~ClaheStage() = default;
 
   cv::Mat get() override;
@@ -42,7 +91,6 @@ public:
   bool hasNext() override;
 
 private:
-  cv::Mat &in;
   Range<float> &clipLimit;
   Range<int> &tileSize;
 
@@ -52,7 +100,7 @@ private:
 
 class BilateralStage : public Stage {
 public:
-  explicit BilateralStage(cv::Mat &in, Range<int> &d, Range<float> &sigmaColor,
+  explicit BilateralStage(Range<int> &d, Range<float> &sigmaColor,
                           Range<float> &sigmaSpace);
   ~BilateralStage() = default;
 
@@ -61,7 +109,6 @@ public:
   bool hasNext() override;
 
 private:
-  cv::Mat &in;
   Range<int> &d;
   Range<float> &sigmaColor;
   Range<float> &sigmaSpace;
@@ -73,7 +120,7 @@ private:
 
 class GammaStage : public Stage {
 public:
-  explicit GammaStage(cv::Mat &in, Range<float> &gamma);
+  explicit GammaStage(Range<float> &gamma);
   ~GammaStage() = default;
 
   cv::Mat get() override;
@@ -81,7 +128,6 @@ public:
   bool hasNext() override;
 
 private:
-  cv::Mat &in;
   Range<float> &gamma;
 
   Range<float>::iterator gammaIt;
@@ -89,7 +135,7 @@ private:
 
 class BlurStage : public Stage {
 public:
-  explicit BlurStage(cv::Mat &in, Range<float> &sigmaX);
+  explicit BlurStage(Range<float> &sigmaX);
   ~BlurStage() = default;
 
   cv::Mat get() override;
@@ -97,7 +143,6 @@ public:
   bool hasNext() override;
 
 private:
-  cv::Mat &in;
   Range<float> &sigmaX;
 
   Range<float>::iterator sigmaXIt;

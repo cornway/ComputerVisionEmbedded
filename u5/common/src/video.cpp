@@ -18,6 +18,8 @@ static struct video_buffer *buffers[2];
 
 #if defined(CONFIG_GRINREFLEX_JPEG_VIDEO)
 static struct video_buffer second_buffer {};
+__attribute__((aligned(32)))
+static uint8_t video_large_buffer[CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * 2];
 #endif
 
 void setup() {
@@ -143,10 +145,9 @@ void setup() {
 
   buffers[1] = &second_buffer;
 
-  bsize = CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * 2;
   buffers[1]->type = type;
-  buffers[1]->buffer = new uint8_t[bsize];
-  buffers[1]->size = bsize;
+  buffers[1]->buffer = video_large_buffer;
+  buffers[1]->size = sizeof(video_large_buffer);
 
   if (buffers[1]->buffer == NULL) {
     LOG_ERR("Unable to alloc video buffer");

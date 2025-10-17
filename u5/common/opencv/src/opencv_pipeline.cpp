@@ -3,9 +3,28 @@
 
 namespace gf_cv {
 
-ClaheStage::ClaheStage(cv::Mat &in, Range<float> &clipLimit,
-                       Range<int> &tileSize)
-    : in(in), clipLimit(clipLimit), tileSize(tileSize) {
+Stage &Stage::setNextStage(Stage *_nextStage) {
+  nextStage = _nextStage;
+  return *this;
+}
+
+bool Stage::invoke(cv::Mat &_in, InvokeCallback callback) {
+  if (!nextStage) {
+    return callback(_in);
+  }
+  setInput(_in);
+  for (auto mat : *this) {
+    if (nextStage->invoke(mat, callback)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void Stage::setInput(cv::Mat &_in) { in = _in; }
+
+ClaheStage::ClaheStage(Range<float> &clipLimit, Range<int> &tileSize)
+    : clipLimit(clipLimit), tileSize(tileSize) {
 
   clipLimitIt = clipLimit.begin();
   tileSizeIt = tileSize.begin();
@@ -31,10 +50,9 @@ bool ClaheStage::hasNext() {
   return (clipLimitIt != clipLimit.end()) && (tileSizeIt != tileSize.end());
 }
 
-BilateralStage::BilateralStage(cv::Mat &in, Range<int> &d,
-                               Range<float> &sigmaColor,
+BilateralStage::BilateralStage(Range<int> &d, Range<float> &sigmaColor,
                                Range<float> &sigmaSpace)
-    : in(in), d(d), sigmaColor(sigmaColor), sigmaSpace(sigmaSpace) {
+    : d(d), sigmaColor(sigmaColor), sigmaSpace(sigmaSpace) {
 
   dIt = d.begin();
   sigmaColorIt = sigmaColor.begin();
@@ -64,8 +82,7 @@ bool BilateralStage::hasNext() {
          (sigmaSpaceIt != sigmaSpace.end());
 }
 
-GammaStage::GammaStage(cv::Mat &in, Range<float> &gamma)
-    : in(in), gamma(gamma) {
+GammaStage::GammaStage(Range<float> &gamma) : gamma(gamma) {
   gammaIt = gamma.begin();
 }
 
@@ -81,8 +98,7 @@ void GammaStage::next() { gammaIt = ++gammaIt; }
 
 bool GammaStage::hasNext() { return (gammaIt != gamma.end()); }
 
-BlurStage::BlurStage(cv::Mat &in, Range<float> &sigmaX)
-    : in(in), sigmaX(sigmaX) {
+BlurStage::BlurStage(Range<float> &sigmaX) : sigmaX(sigmaX) {
   sigmaXIt = sigmaX.begin();
 }
 

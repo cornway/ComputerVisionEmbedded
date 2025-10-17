@@ -1,12 +1,13 @@
-#include <opencv2/opencv.hpp>
 #include <iostream>
+#include <opencv2/opencv.hpp>
 
 #include "HaarPath.hpp"
 
 #include "gf/opencv_utils.hpp"
 
 cv::String haarPath = HAAR_PATH;
-cv::String face_cascade_name = haarPath + "lbpcascades/lbpcascade_frontalface_improved.xml";
+cv::String face_cascade_name =
+    haarPath + "lbpcascades/lbpcascade_frontalface_improved.xml";
 cv::String smile_cascade_name = haarPath + "haarcascades/haarcascade_smile.xml";
 cv::CascadeClassifier face_cascade;
 cv::CascadeClassifier smile_cascade;
@@ -16,110 +17,116 @@ cv::String window_name_smile = "Smile";
 using namespace gf_cv;
 
 bool checkFrameSizeSupported(cv::Mat &gray) {
-	if (gray.cols == 640 && gray.rows == 480) {
-		return true;
-	}
+  if (gray.cols == 640 && gray.rows == 480) {
+    return true;
+  }
 
-	if (gray.cols == 320 && gray.rows == 240) {
-		return true;
-	}
-	return false;
+  if (gray.cols == 320 && gray.rows == 240) {
+    return true;
+  }
+  return false;
 }
 
-int main(int, char**) {
-    // open the first webcam plugged in the computer
-    cv::VideoCapture camera(0); // in linux check $ ls /dev/video0
-    if (!camera.isOpened()) {
-        std::cerr << "ERROR: Could not open camera" << std::endl;
-        return 1;
+int main(int, char **) {
+  // open the first webcam plugged in the computer
+  cv::VideoCapture camera(0); // in linux check $ ls /dev/video0
+  if (!camera.isOpened()) {
+    std::cerr << "ERROR: Could not open camera" << std::endl;
+    return 1;
+  }
+
+  // array to hold image
+  cv::Mat frameOriginal;
+  cv::Mat frameScreenGray;
+
+  if (!face_cascade.load(face_cascade_name)) {
+    printf("--(!)Error loading face cascade\n");
+    return -1;
+  };
+  if (!smile_cascade.load(smile_cascade_name)) {
+    printf("--(!)Error loading eyes cascade\n");
+    return -1;
+  };
+
+  cv::namedWindow(window_name, cv::WND_PROP_ASPECT_RATIO);
+  // display the frame until you press a key
+
+  std::cout << "Start capturing" << std::endl;
+  std::map<std::string, uint32_t> smileROIKernelParamsScore;
+  while (camera.read(frameOriginal)) {
+
+    if (frameOriginal.empty()) {
+      printf(" --(!) No captured frame -- Break!");
+      break;
     }
 
-    // array to hold image
-    cv::Mat frameOriginal;
-	cv::Mat frameScreenGray;
+    cv::Mat frameOriginalGray;
+    cv::cvtColor(frameOriginal, frameOriginalGray, cv::COLOR_BGR2GRAY);
+    // cv::equalizeHist(frameOriginalGray, frameOriginalGray);
 
-    if (!face_cascade.load(face_cascade_name))
-	{
-		printf("--(!)Error loading face cascade\n"); 
-		return -1;
-	};
-	if (!smile_cascade.load(smile_cascade_name)) 
-	{
-		printf("--(!)Error loading eyes cascade\n"); 
-		return -1;
-	};
-    
-    cv::namedWindow(window_name, cv::WND_PROP_ASPECT_RATIO);
-    // display the frame until you press a key
+    if (false == checkFrameSizeSupported(frameOriginalGray)) {
+      std::cerr << "Not supported frame size" << std::endl;
+      exit(-1);
+    }
 
-	std::cout << "Start capturing" << std::endl;
-	ROIKernelParamsSweep smileROIKernelParams;
-	std::map<std::string, uint32_t> smileROIKernelParamsScore;
-	while (camera.read(frameOriginal)) {
+    cv::Mat frameCroppedGray;
 
-		if (frameOriginal.empty())
-		{
-			printf(" --(!) No captured frame -- Break!");
-			break;
-		}
+    if (frameOriginalGray.cols == 640 && frameOriginalGray.rows == 480) {
+      cv::Rect crop;
+      crop.width = 320;
+      crop.height = 240;
+      crop.x = (frameOriginalGray.cols - crop.width) / 2;
+      crop.y = (frameOriginalGray.rows - crop.height) / 2;
+      frameCroppedGray = frameOriginalGray(crop);
+    } else {
+      frameCroppedGray = frameOriginalGray;
+    }
 
-		cv::Mat frameOriginalGray;
-		cv::cvtColor(frameOriginal, frameOriginalGray, cv::COLOR_BGR2GRAY);
-		//cv::equalizeHist(frameOriginalGray, frameOriginalGray);
+    cv::Rect faceROIMax{};
+    faceROIMax.width = 64;
+    faceROIMax.height = 40;
 
-		if (false == checkFrameSizeSupported(frameOriginalGray)) {
-			std::cerr << "Not supported frame size" << std::endl;
-			exit(-1);
-		}
+    cv::resize(frameCroppedGray, frameScreenGray, cv::Size(80, 80), 0.0f, 0.0f,
+               cv::INTER_NEAREST);
 
-		cv::Mat frameCroppedGray;
+    std::vector<cv::Rect> faces, smiles;
 
-		if (frameOriginalGray.cols == 640 && frameOriginalGray.rows == 480) {
-			cv::Rect crop;
-			crop.width = 320;
-			crop.height = 240;
-			crop.x = (frameOriginalGray.cols - crop.width) / 2;
-			crop.y = (frameOriginalGray.rows - crop.height) / 2;
-			frameCroppedGray = frameOriginalGray(crop);
-		} else {
-			frameCroppedGray = frameOriginalGray;
-		}
+    auto sigmaX = Range<float>{0.82, 0.87, 0.01};
+    BlurStage blurStage = BlurStage(sigmaX);
 
-		cv::Rect faceROIMax{};
-		faceROIMax.width = 64;
-		faceROIMax.height = 40;
+    auto gamma = Range<float>{0.44, 0.50, 0.02};
+    GammaStage gammaStage = GammaStage(gamma);
 
-		cv::resize(frameCroppedGray, frameScreenGray, cv::Size(80, 80), 0.0f, 0.0f, cv::INTER_NEAREST );
+    auto d = Range<int>{3, 3, 1};
+    auto sigmaColor = Range<float>{10.0, 10.0, 1.0};
+    auto sigmaSpace = Range<float>{50.0, 50.0, 1.0};
+    BilateralStage bilateralStage = BilateralStage(d, sigmaColor, sigmaSpace);
 
-		std::vector<cv::Rect> faces, smiles;
+    auto clipLimit = Range<float>{4.0, 4.0, 1.0};
+    auto tileSize = Range<int>{4, 4, 1};
+    ClaheStage claheStage = ClaheStage(clipLimit, tileSize);
 
-		smileROIKernelParams.clahe.clipLimit = Range<float>{4.0, 4.0, 1.0};
-		smileROIKernelParams.clahe.tileSize = Range<int>{4, 4, 1};
-		smileROIKernelParams.biFilter.d = Range<int>{3, 3, 1};
-		smileROIKernelParams.biFilter.sigmaColor = Range<float>{10.0, 10.0, 1.0};
-		smileROIKernelParams.biFilter.sigmaSpace = Range<float>{50.0, 50.0, 1.0};
-		smileROIKernelParams.gamma.gamma = Range<float>{0.44, 0.50, 0.02};
-		smileROIKernelParams.blur.sigmaX = Range<float>{0.82, 0.87, 0.01};
+    claheStage.setNextStage(&bilateralStage);
+    bilateralStage.setNextStage(&gammaStage);
+    gammaStage.setNextStage(nullptr);
+    // blurStage.setNextStage(nullptr);
 
-		auto rects = detectFaceAndSmile(
-			face_cascade,
-			smile_cascade,
-			frameScreenGray,
-			frameCroppedGray,
-			faceROIMax,
-			smileROIKernelParams
-		);
+    auto rects =
+        detectFaceAndSmile(face_cascade, smile_cascade, frameScreenGray,
+                           frameCroppedGray, faceROIMax, claheStage);
 
-		for (const auto &rect : rects) {
-			rectangle(frameScreenGray, rect, cv::Scalar(0, 0, 255), 1, 1, 0);
-		}
+    for (const auto &rect : rects) {
+      rectangle(frameScreenGray, rect, cv::Scalar(0, 0, 255), 1, 1, 0);
+    }
 
-		cv::imshow(window_name, frameScreenGray);
+    cv::imshow(window_name, frameScreenGray);
 
-		int c = cv::waitKey(1);
-		if ((char)c == 27) { break; }
+    int c = cv::waitKey(1);
+    if ((char)c == 27) {
+      break;
+    }
 
-		continue;
+    continue;
 
 #if 0
 		if (faces.empty()) {
@@ -187,17 +194,19 @@ int main(int, char**) {
 			}
 		}
 #endif
-    }
+  }
 
-	for (auto & [key, score] : smileROIKernelParamsScore) {
-		std::cout << "key = " << key << ", score = " << score << std::endl;
-	}
+  for (auto &[key, score] : smileROIKernelParamsScore) {
+    std::cout << "key = " << key << ", score = " << score << std::endl;
+  }
 
-    return 0;
+  return 0;
 }
 
-// CMD to generate executable: 
-// g++ webcam_opencv.cpp -o webcam_demo -I/usr/include/opencv4 -lopencv_core -lopencv_videoio -lopencv_highgui
+// CMD to generate executable:
+// g++ webcam_opencv.cpp -o webcam_demo -I/usr/include/opencv4 -lopencv_core
+// -lopencv_videoio -lopencv_highgui
 
-// Note: check your opencv hpp files - for many users it is at /usr/local/include/opencv4
-// Add more packages during compilation from the list obtained by $ pkg-config --cflags --libs opencv4
+// Note: check your opencv hpp files - for many users it is at
+// /usr/local/include/opencv4 Add more packages during compilation from the list
+// obtained by $ pkg-config --cflags --libs opencv4

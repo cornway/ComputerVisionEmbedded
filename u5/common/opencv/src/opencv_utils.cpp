@@ -74,79 +74,10 @@ static bool detectSmile(cv::CascadeClassifier &cascade, cv::Mat &in,
   return !rects.empty();
 }
 
-static bool sweepBlur(cv::CascadeClassifier &cascade, cv::Mat &in,
-                      std::vector<cv::Rect> &rects,
-                      ROIKernelParamsSweep &params) {
-
-  BlurStage blurStage = BlurStage(in, params.blur.sigmaX);
-
-  for (auto blur : blurStage) {
-    if (detectSmile(cascade, blur, rects)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-static bool sweepGamma(cv::CascadeClassifier &cascade, cv::Mat &in,
-                       std::vector<cv::Rect> &rects,
-                       ROIKernelParamsSweep &params) {
-
-  GammaStage gammaStage = GammaStage(in, params.gamma.gamma);
-
-  for (auto gamma : gammaStage) {
-    if (sweepBlur(cascade, gamma, rects, params)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-static bool sweepBilateral(cv::CascadeClassifier &cascade, cv::Mat &in,
-                           std::vector<cv::Rect> &rects,
-                           ROIKernelParamsSweep &params) {
-
-  BilateralStage bilateralStage =
-      BilateralStage(in, params.biFilter.d, params.biFilter.sigmaColor,
-                     params.biFilter.sigmaSpace);
-
-  for (auto bilateral : bilateralStage) {
-    if (sweepGamma(cascade, bilateral, rects, params)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-static bool sweepClahe(cv::CascadeClassifier &cascade, cv::Mat &in,
-                       std::vector<cv::Rect> &rects,
-                       ROIKernelParamsSweep &params) {
-
-  ClaheStage claheStage =
-      ClaheStage(in, params.clahe.clipLimit, params.clahe.tileSize);
-
-  for (auto clahe : claheStage) {
-    if (sweepBilateral(cascade, clahe, rects, params)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-static void detectSmile(cv::CascadeClassifier &cascade, cv::Mat &in,
-                        std::vector<cv::Rect> &rects,
-                        ROIKernelParamsSweep &params) {
-
-  sweepClahe(cascade, in, rects, params);
-}
-
 std::vector<cv::Rect>
 detectFaceAndSmile(cv::CascadeClassifier &faceCascade,
                    cv::CascadeClassifier &smileCascade, cv::Mat &thumbnailFrame,
-                   cv::Mat &fullFrame, cv::Rect &faceROIMax,
-                   ROIKernelParamsSweep &roIKernelParamsSweep) {
+                   cv::Mat &fullFrame, cv::Rect &faceROIMax, Stage &pipeline) {
 
   std::vector<cv::Rect> rects;
 
@@ -198,9 +129,16 @@ detectFaceAndSmile(cv::CascadeClassifier &faceCascade,
       }
 
       std::vector<cv::Rect> smileRects;
-      detectSmile(smileCascade, faceROIFrameResized, smileRects,
-                  roIKernelParamsSweep);
-      // detectSmile(smileCascade, faceROIFrameResized, smileRects);
+
+      detectSmile(smileCascade, faceROIFrameResized, smileRects);
+
+      // pipeline.invoke(faceROIFrameResized, [&](cv::Mat &in) -> bool {
+      //   return detectSmile(smileCascade, in, smileRects);
+      // });
+
+      // detectSmile(smileCascade, faceROIFrameResized, smileRects,
+      //             roIKernelParamsSweep);
+      //  detectSmile(smileCascade, faceROIFrameResized, smileRects);
 
       float ssx_inv = (float)thumbnailFrame.cols / (float)fullFrame.cols;
       float ssy_inv = (float)thumbnailFrame.rows / (float)fullFrame.rows;

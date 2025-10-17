@@ -61,8 +61,6 @@ static lv_obj_t *ROIRectSmile;
 static cv::CascadeClassifier faceCascade;
 static cv::CascadeClassifier smileCascade;
 
-ROIKernelParamsSweep smileROIKernelParams;
-
 int init() {
   if (!device_is_ready(display_dev)) {
     LOG_ERR("Display device not ready, aborting test");
@@ -117,14 +115,6 @@ int init() {
       allocLvROIRect(lv_scr_act(), 4, lv_palette_main(LV_PALETTE_GREEN));
   ROIRectSmile =
       allocLvROIRect(lv_scr_act(), 4, lv_palette_main(LV_PALETTE_RED));
-
-  smileROIKernelParams.clahe.clipLimit = Range<float>(4.0, 4.0, 1.0);
-  smileROIKernelParams.clahe.tileSize = Range<int>(4, 4, 1);
-  smileROIKernelParams.biFilter.d = Range<int>(3, 3, 1);
-  smileROIKernelParams.biFilter.sigmaColor = Range<float>(20.0, 20.0, 1.0);
-  smileROIKernelParams.biFilter.sigmaSpace = Range<float>(50.0, 50.0, 1.0);
-  smileROIKernelParams.gamma.gamma = Range<float>(0.44, 0.50, 0.1);
-  smileROIKernelParams.blur.sigmaX = Range<float>(0.75, 0.85, 0.05);
 
   return 0;
 }
@@ -183,10 +173,28 @@ int loop() {
   // But that may miss smile area
   cv::Rect faceROIMax(0, 0, 64, 40);
 
+  auto sigmaX = Range<float>{0.75, 0.85, 0.05};
+  BlurStage blurStage = BlurStage(sigmaX);
+
+  auto _gamma = Range<float>{0.35, 0.55, 0.05};
+  GammaStage gammaStage = GammaStage(_gamma);
+
+  auto d = Range<int>{3, 3, 1};
+  auto sigmaColor = Range<float>{10.0, 30.0, 10.0};
+  auto sigmaSpace = Range<float>{50.0, 50.0, 1.0};
+  BilateralStage bilateralStage = BilateralStage(d, sigmaColor, sigmaSpace);
+
+  auto clipLimit = Range<float>{4.0, 4.0, 1.0};
+  auto tileSize = Range<int>{4, 4, 1};
+  ClaheStage claheStage = ClaheStage(clipLimit, tileSize);
+  claheStage.setNextStage(&bilateralStage);
+  bilateralStage.setNextStage(&gammaStage);
+  gammaStage.setNextStage(nullptr);
+  // blurStage.setNextStage(nullptr);
+
   cv::equalizeHist(matGraySmall, matGraySmall);
-  auto rects =
-      detectFaceAndSmile(faceCascade, smileCascade, matGraySmall, matGrayFull,
-                         faceROIMax, smileROIKernelParams);
+  auto rects = detectFaceAndSmile(faceCascade, smileCascade, matGraySmall,
+                                  matGrayFull, faceROIMax, claheStage);
 
   cv::Rect face, smile;
   if (rects.size()) {
