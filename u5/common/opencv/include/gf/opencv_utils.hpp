@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "opencv2/opencv.hpp"
+#include "gf/opencv_pipeline.hpp"
 
 namespace gf_cv {
 
@@ -11,52 +11,6 @@ bool loadCascade(cv::CascadeClassifier &cascade, const char *path);
 bool loadCascade(cv::CascadeClassifier &cascade, cv::FileStorage &fs);
 bool loadCascade(cv::CascadeClassifier &cascade, const uint8_t *buffer,
                  size_t len);
-
-template <class T> struct Range {
-  static_assert(std::is_arithmetic<T>::value,
-                "struct Range: T must be arithmetic");
-
-  T start, stop, step;
-
-  struct sentinel {};
-
-  struct iterator {
-    T value, stop, step;
-
-    T operator*() const { return value; };
-    iterator &operator++() {
-      value += step;
-      return *this;
-    }
-    bool operator!=(sentinel) { return value <= stop; }
-    bool operator==(sentinel) { return value > stop; }
-  };
-
-  iterator begin() const {
-    assert(step > T(0) && "Range: step must be > 0");
-    return {start, stop, step};
-  }
-
-  sentinel end() const { return {}; }
-};
-
-struct ROIKernelParamsSweep {
-  struct Clahe {
-    Range<float> clipLimit;
-    Range<int> tileSize;
-  } clahe;
-  struct BiFilter {
-    Range<int> d;
-    Range<float> sigmaColor;
-    Range<float> sigmaSpace;
-  } biFilter;
-  struct Gamma {
-    Range<float> gamma;
-  } gamma;
-  struct Blur {
-    Range<float> sigmaX;
-  } blur;
-};
 
 /**
  * @brief
@@ -72,11 +26,11 @@ struct ROIKernelParamsSweep {
  * @param roIKernelParamsSweep
  * @return vector of cv::Rects for detected objects
  */
-std::vector<cv::Rect>
-detectFaceAndSmile(cv::CascadeClassifier &faceCascade,
-                   cv::CascadeClassifier &smileCascade, cv::Mat &thumbnailFrame,
-                   cv::Mat &fullFrame, cv::Rect &faceROIMax,
-                   ROIKernelParamsSweep &roIKernelParamsSweep);
+std::vector<cv::Rect> detectFaceAndSmile(cv::CascadeClassifier &faceCascade,
+                                         cv::CascadeClassifier &smileCascade,
+                                         cv::Mat &thumbnailFrame,
+                                         cv::Mat &fullFrame,
+                                         cv::Rect &faceROIMax, Stage &pipeline);
 
 cv::Mat cv_preprocessForQR(const cv::Mat &bgr);
 
