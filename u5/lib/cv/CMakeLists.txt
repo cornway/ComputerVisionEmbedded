@@ -5,6 +5,13 @@ zephyr_get_compile_options_for_lang_as_string(           C options)
 zephyr_get_compile_definitions_for_lang_as_string(       CXX definitions)
 zephyr_get_compile_options_for_lang_as_string(           CXX options)
 
+set(OPENCV_FORCE_3RDPARTY_BUILD OFF)
+set(USE_ZLIB OFF)
+if (CONFIG_OPENCV_FORCE_3RDPARTY_BUILD)
+    set(OPENCV_FORCE_3RDPARTY_BUILD ON)
+    set(USE_ZLIB ON)
+endif()
+
 set(external_project_cflags
   "${definitions} ${options}"
 )
@@ -54,7 +61,7 @@ add_custom_command(
         -DWITH_JASPER=OFF
         -DBUILD_JPEG=OFF
         -DWITH_WEBP=OFF
-        -DBUILD_ZLIB=ON
+        -DBUILD_ZLIB=${USE_ZLIB}
         -DBUILD_PNG=OFF
         -DBUILD_OPENEXR=OFF
         -DWITH_TIFF=OFF
@@ -87,7 +94,7 @@ add_custom_command(
         -DCV_TRACE=OFF
         -DOPENCV_ENABLE_MEMALIGN=OFF
         -DOPENCV_DISABLE_THREAD_SUPPORT=ON
-        -DOPENCV_FORCE_3RDPARTY_BUILD=ON
+        -DOPENCV_FORCE_3RDPARTY_BUILD=${OPENCV_FORCE_3RDPARTY_BUILD}
         -DENABLE_VFPV3=OFF
         -DCPU_BASELINE_DISABLE=ALL
         -DCPU_DISPATCH=""
@@ -113,12 +120,17 @@ set(BUILD_BYPRODUCTS
     ${OPENCV_INSTALL_DIR}/lib/libopencv_flann.a
     ${OPENCV_INSTALL_DIR}/lib/libopencv_objdetect.a
     ${OPENCV_INSTALL_DIR}/lib/libopencv_core.a
+)
 
+if (OPENCV_FORCE_3RDPARTY_BUILD)
+set(BUILD_BYPRODUCTS
+    ${BUILD_BYPRODUCTS}
     ${OPENCV_INSTALL_DIR}/lib/opencv4/3rdparty/liblibpng.a
     ${OPENCV_INSTALL_DIR}/lib/opencv4/3rdparty/liblibopenjp2.a
     ${OPENCV_INSTALL_DIR}/lib/opencv4/3rdparty/libzlib.a
     ${OPENCV_INSTALL_DIR}/lib/opencv4/3rdparty/liblibjpeg-turbo.a
 )
+endif()
 
 include(ExternalProject)
 
@@ -156,10 +168,12 @@ opencv_add_lib(libopencv_flann)
 opencv_add_lib(libopencv_objdetect)
 opencv_add_lib(libopencv_core)
 
+if (OPENCV_FORCE_3RDPARTY_BUILD)
 opencv_add_lib_3p(liblibpng)
 opencv_add_lib_3p(liblibopenjp2)
 opencv_add_lib_3p(libzlib)
 opencv_add_lib_3p(liblibjpeg-turbo)
+endif()
 
 add_library(opencv_lib INTERFACE)
 target_link_libraries(opencv_lib INTERFACE
@@ -170,11 +184,15 @@ libopencv_flann
 libopencv_features2d
 libopencv_imgproc
 libopencv_core
+)
 
+if (OPENCV_FORCE_3RDPARTY_BUILD)
+target_link_libraries(opencv_lib INTERFACE
 liblibpng
 liblibopenjp2
 libzlib
 liblibjpeg-turbo
 )
+endif()
 
 set_target_properties(opencv_lib PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${OPENCV_INSTALL_DIR}/include/opencv4)

@@ -1,2 +1,7 @@
 config OPENCV_LIB
 	bool "Support for opencv custom library"
+
+config OPENCV_FORCE_3RDPARTY_BUILD
+	bool "Build opencv 3d party libraries"
+	default n
+	depends on OPENCV_LIB

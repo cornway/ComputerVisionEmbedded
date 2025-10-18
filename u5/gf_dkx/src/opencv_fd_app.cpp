@@ -58,6 +58,10 @@ static uint8_t
 static lv_obj_t *screen_canvas;
 static lv_obj_t *dummy_canvas;
 
+#if INPUT_PREPROCESS_OPENCV
+static lv_obj_t *lvgl_image;
+#endif
+
 static lv_obj_t *ROIRectFace;
 static lv_obj_t *ROIRectSmile;
 static cv::CascadeClassifier faceCascade;
@@ -109,6 +113,11 @@ int init() {
   lv_canvas_fill_bg(screen_canvas, lv_color_hex3(0xccc), LV_OPA_COVER);
   lv_obj_center(screen_canvas);
 
+#if INPUT_PREPROCESS_OPENCV
+  lvgl_image = lv_img_create(lv_scr_act());
+  lv_obj_center(lvgl_image);
+#endif
+
   display_blanking_off(display_dev);
 
   ROIRectFace =
@@ -144,6 +153,31 @@ int loop() {
   jpeg_color_convert_helper(jpeg_dev, &jpeg_prop, vbuf_ptr->buffer,
                             fullFrameBuffer);
 
+  cv::Mat matGrayFull(FULL_FRAME_HEIGHT, FULL_FRAME_WIDTH, CV_8UC1,
+                      fullFrameBuffer);
+
+  cv::Mat matGrayRoi(ROI_FRAME_HEIGHT, ROI_FRAME_WIDTH, CV_8UC1,
+                     roiFrameBuffer);
+
+  cv::Mat matGraySmall(THUMBNAIL_FRAME_HEIGHT, THUMBNAIL_FRAME_WIDTH, CV_8UC1,
+                       thumbnailFrameBuffer);
+
+#if INPUT_PREPROCESS_OPENCV
+  cv::Rect crop;
+  crop.width = ROI_FRAME_WIDTH;
+  crop.height = ROI_FRAME_HEIGHT;
+  crop.x = (matGrayFull.cols - crop.width) / 2;
+  crop.y = crop.height;
+  cv::Mat matCrop = matGrayFull(crop);
+  matCrop.copyTo(matGrayRoi);
+  cv::resize(matGrayRoi, matGraySmall,
+             cv::Size(THUMBNAIL_FRAME_WIDTH, THUMBNAIL_FRAME_HEIGHT), 0.0f,
+             0.0f, cv::INTER_NEAREST);
+
+  displayFrame(lvgl_image, thumbnailFrameBuffer,
+               lvgl::Size(THUMBNAIL_FRAME_WIDTH, THUMBNAIL_FRAME_HEIGHT),
+               LV_COLOR_FORMAT_L8);
+#else
   cropFullFrameToRoi(dummy_canvas, fullFrameBuffer, roiFrameBuffer,
                      lvgl::Size(FULL_FRAME_WIDTH, FULL_FRAME_HEIGHT),
                      lvgl::Size(ROI_FRAME_WIDTH, ROI_FRAME_HEIGHT),
@@ -155,6 +189,8 @@ int loop() {
       lvgl::Size(ROI_FRAME_WIDTH, ROI_FRAME_HEIGHT),
       lvgl::Size(THUMBNAIL_FRAME_WIDTH, THUMBNAIL_FRAME_HEIGHT),
       LV_COLOR_FORMAT_L8, LV_COLOR_FORMAT_L8);
+
+#endif /* #if INPUT_PREPROCESS_OPENCV */
   lv_task_handler();
 
   // Return buffer back, we don't need it anymore, thank you
@@ -164,13 +200,8 @@ int loop() {
     return 0;
   }
 
-  cv::Mat matGraySmall(THUMBNAIL_FRAME_HEIGHT, THUMBNAIL_FRAME_WIDTH, CV_8UC1,
-                       thumbnailFrameBuffer);
-  cv::Mat matGrayFull(ROI_FRAME_HEIGHT, ROI_FRAME_WIDTH, CV_8UC1,
-                      roiFrameBuffer);
-
   // This is the best configuration I could find, 64 x 30 works even better
-  // But that may miss smile area
+  // But that may miss mouth area
   auto smileCascadeSize = smileCascade.getOriginalWindowSize();
   cv::Rect faceROIMax(0, 0, smileCascadeSize.width * 2,
                       smileCascadeSize.height * 2);
@@ -195,16 +226,21 @@ int loop() {
       .setNextStage(&blurStage)
       .setNextStage(nullptr);
 
-  cv::equalizeHist(matGraySmall, matGraySmall);
+  //cv::equalizeHist(matGraySmall, matGraySmall);
   auto rects = detectFaceAndSmile(faceCascade, smileCascade, matGraySmall,
-                                  matGrayFull, faceROIMax, claheStage);
+                                  matGrayRoi, faceROIMax, claheStage);
+
+  lv_obj_t *draw_widget = screen_canvas;
+#if INPUT_PREPROCESS_OPENCV
+  draw_widget = lvgl_image;
+#endif
 
   cv::Rect face, smile;
   if (rects.size()) {
     lv_obj_remove_flag(ROIRectFace, LV_OBJ_FLAG_HIDDEN);
 
     face = rects[0];
-    lv_obj_align_to(ROIRectFace, screen_canvas, LV_ALIGN_TOP_LEFT, face.x,
+    lv_obj_align_to(ROIRectFace, draw_widget, LV_ALIGN_TOP_LEFT, face.x,
                     face.y);
     lv_obj_set_size(ROIRectFace, face.width, face.height);
 
@@ -215,7 +251,7 @@ int loop() {
   if (rects.size() > 1) {
     smile = rects[1];
     if ((smile & face).area() != 0) {
-      lv_obj_align_to(ROIRectSmile, screen_canvas, LV_ALIGN_TOP_LEFT, smile.x,
+      lv_obj_align_to(ROIRectSmile, draw_widget, LV_ALIGN_TOP_LEFT, smile.x,
                       smile.y);
       lv_obj_set_size(ROIRectSmile, smile.width, smile.height);
 

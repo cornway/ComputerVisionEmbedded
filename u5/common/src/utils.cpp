@@ -82,3 +82,17 @@ void fitRoiFrameToThumbnail(lv_obj_t *parent, uint8_t *roiFb, uint8_t *tFb,
   lvgl::fit(parent, src, dst);
   // lv_task_handler();
 }
+
+void displayFrame(lv_obj_t *parent, uint8_t *fb, lvgl::Size sz, uint32_t cf) {
+  static lv_image_dsc_t img_dsc{};
+
+  img_dsc.header.magic = LV_IMAGE_HEADER_MAGIC;
+  img_dsc.header.w = sz.width;
+  img_dsc.header.h = sz.height;
+  img_dsc.header.stride = sz.width * LV_COLOR_FORMAT_GET_SIZE(cf);
+  img_dsc.header.cf = cf; /* Set the color format */
+  img_dsc.data_size = sz.width * sz.height * LV_COLOR_FORMAT_GET_SIZE(cf);
+  img_dsc.data = fb;
+
+  lv_img_set_src(parent, &img_dsc); // point the widget to our descriptor
+}
