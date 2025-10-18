@@ -12,3 +12,5 @@ void cropFullFrameToRoi(lv_obj_t *parent, uint8_t *fullFb, uint8_t *roiFb,
 void fitRoiFrameToThumbnail(lv_obj_t *parent, uint8_t *roiFb, uint8_t *tFb,
                             lvgl::Size roiSz, lvgl::Size tSz, uint32_t roiCf,
                             uint32_t tCf);
+
+void displayFrame(lv_obj_t *parent, uint8_t *fb, lvgl::Size sz, uint32_t cf);
