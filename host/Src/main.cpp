@@ -82,23 +82,24 @@ int main(int, char **) {
       frameCroppedGray = frameOriginalGray;
     }
 
-    cv::Rect faceROIMax{};
-    faceROIMax.width = 64;
-    faceROIMax.height = 40;
+    auto smileCascadeSize = smile_cascade.getOriginalWindowSize();
+    cv::Rect faceROIMax(0, 0, smileCascadeSize.width * 2,
+                        smileCascadeSize.height * 2);
 
-    cv::resize(frameCroppedGray, frameScreenGray, cv::Size(80, 80), 0.0f, 0.0f,
+    cv::resize(frameCroppedGray, frameScreenGray,
+               face_cascade.getOriginalWindowSize() * 2, 0.0f, 0.0f,
                cv::INTER_NEAREST);
 
     std::vector<cv::Rect> faces, smiles;
 
-    auto sigmaX = Range<float>{0.82, 0.87, 0.01};
+    auto sigmaX = Range<float>{0.85, 0.85, 0.01};
     BlurStage blurStage = BlurStage(sigmaX);
 
-    auto gamma = Range<float>{0.44, 0.50, 0.02};
-    GammaStage gammaStage = GammaStage(gamma);
+    auto _gamma = Range<float>{0.30, 0.50, 0.05};
+    GammaStage gammaStage = GammaStage(_gamma);
 
     auto d = Range<int>{3, 3, 1};
-    auto sigmaColor = Range<float>{10.0, 10.0, 1.0};
+    auto sigmaColor = Range<float>{20.0, 20.0, 10.0};
     auto sigmaSpace = Range<float>{50.0, 50.0, 1.0};
     BilateralStage bilateralStage = BilateralStage(d, sigmaColor, sigmaSpace);
 
@@ -106,11 +107,47 @@ int main(int, char **) {
     auto tileSize = Range<int>{4, 4, 1};
     ClaheStage claheStage = ClaheStage(clipLimit, tileSize);
 
-    claheStage.setNextStage(&bilateralStage);
-    bilateralStage.setNextStage(&gammaStage);
-    gammaStage.setNextStage(nullptr);
-    // blurStage.setNextStage(nullptr);
+    claheStage.setNextStage(&bilateralStage)
+        .setNextStage(&gammaStage)
+        .setNextStage(&blurStage)
+        .setNextStage(nullptr);
 
+    bool break_key = false;
+
+#if 0
+    std::vector<cv::Rect> rects;
+
+    auto clipLimitFace = Range<float>{4.0, 4.0, 1.0};
+    auto tileSizeFace = Range<int>{2, 2, 1};
+    ClaheStage claheFaceStage = ClaheStage(clipLimitFace, tileSizeFace);
+
+    auto _gammaFace = Range<float>{0.30, 2.0, 0.1};
+    GammaStage gammaStageFace = GammaStage(_gammaFace);
+
+    claheFaceStage.setNextStage(nullptr);
+
+    claheFaceStage.invoke(
+        frameScreenGray, [&](Stage &stage, cv::Mat in) -> bool {
+          rects = detectFaceAndSmile(face_cascade, smile_cascade, in,
+                                     frameCroppedGray, faceROIMax, claheStage);
+
+          if (!rects.empty()) {
+            stage.dump();
+          }
+          for (const auto &rect : rects) {
+            rectangle(in, rect, cv::Scalar(0, 0, 255), 1, 1, 0);
+          }
+
+          cv::imshow(window_name, in);
+          int c = cv::waitKey(1);
+          if ((char)c == 27) {
+            break_key = true;
+            return true;
+          }
+          return !rects.empty();
+        });
+#else
+    // cv::equalizeHist(frameScreenGray, frameScreenGray);
     auto rects =
         detectFaceAndSmile(face_cascade, smile_cascade, frameScreenGray,
                            frameCroppedGray, faceROIMax, claheStage);
@@ -121,8 +158,9 @@ int main(int, char **) {
 
     cv::imshow(window_name, frameScreenGray);
 
+#endif
     int c = cv::waitKey(1);
-    if ((char)c == 27) {
+    if ((char)c == 27 || break_key) {
       break;
     }
 

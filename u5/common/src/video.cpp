@@ -3,7 +3,6 @@
 #include <lvgl.h>
 #include <lvgl_input_device.h>
 #include <zephyr/drivers/display.h>
-#include <zephyr/logging/log.h>
 
 #include "gf/video.hpp"
 
