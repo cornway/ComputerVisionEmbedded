@@ -60,4 +60,8 @@ config VARIANT_RELEASE
 	default n
 	depends on BOARD_GRINREFLEX_DK2
 
+config VARIAND_FACE_DETECT_ONLY
+	bool "Build only face detector"
+	default n
+
 endmenu

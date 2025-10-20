@@ -159,6 +159,21 @@ detectFaceAndSmile(cv::CascadeClassifier &faceCascade,
   return rects;
 }
 
+std::vector<cv::Rect> detectFace(cv::CascadeClassifier &faceCascade,
+                                 cv::Mat &thumbnailFrame) {
+
+  const double scaleFactor = 1.04;
+  const int minNeighbors = 3;
+  const int flags = cv::CASCADE_FIND_BIGGEST_OBJECT;
+
+  // cv::equalizeHist(thumbnailFrame, thumbnailFrame);
+  std::vector<cv::Rect> faceRects;
+  faceCascade.detectMultiScale(thumbnailFrame, faceRects, scaleFactor,
+                               minNeighbors, flags);
+
+  return faceRects;
+}
+
 cv::Rect remapROI(cv::Rect &ROI, cv::Mat &inFrame, cv::Mat &outFrame) {
   float sx = (float)outFrame.cols / (float)inFrame.cols;
   float sy = (float)outFrame.rows / (float)inFrame.rows;

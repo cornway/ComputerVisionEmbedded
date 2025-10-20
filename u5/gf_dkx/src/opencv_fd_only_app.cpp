@@ -1,0 +1,220 @@
+
+#include <iostream>
+#include <vector>
+
+#if defined(CONFIG_OPENCV_LIB)
+#include "cascades.h"
+#include "gf/opencv_utils.hpp"
+#include "opencv2/opencv.hpp"
+#endif
+
+#include <lvgl.h>
+#include <lvgl_input_device.h>
+#include <stdio.h>
+#include <string.h>
+#include <zephyr/device.h>
+#include <zephyr/devicetree.h>
+#include <zephyr/drivers/display.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/kernel.h>
+
+#include <stdio.h>
+
+#define LOG_LEVEL CONFIG_LOG_DEFAULT_LEVEL
+#include <zephyr/logging/log.h>
+LOG_MODULE_REGISTER(grinreflex_app);
+
+#include "gf/lvgl_utils.hpp"
+#include "gf/video.hpp"
+
+#include <app/drivers/jpeg.h>
+
+#include "config.hpp"
+#include "gf/utils.hpp"
+#include "grinreflex.h"
+
+using namespace gf_cv;
+
+static const struct device *video_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_camera));
+
+static const struct device *display_dev =
+    DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
+
+const struct device *jpeg_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_jpeg));
+
+#if DT_NODE_EXISTS(DT_ALIAS(led0))
+static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
+#endif
+
+static uint8_t
+    fullFrameBuffer[FULL_FRAME_WIDTH * FULL_FRAME_HEIGHT *
+                    LV_COLOR_FORMAT_GET_SIZE(FULL_FRAME_COLOR_FORMAT)];
+static uint8_t roiFrameBuffer[ROI_FRAME_WIDTH * ROI_FRAME_HEIGHT *
+                              LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_L8)];
+static uint8_t
+    thumbnailFrameBuffer[THUMBNAIL_FRAME_WIDTH * THUMBNAIL_FRAME_HEIGHT *
+                         LV_COLOR_FORMAT_GET_SIZE(LV_COLOR_FORMAT_L8)];
+
+static lv_obj_t *screen_canvas;
+static lv_obj_t *dummy_canvas;
+
+#if INPUT_PREPROCESS_OPENCV
+static lv_obj_t *lvgl_image;
+#endif
+
+static lv_obj_t *ROIRectFace;
+static cv::CascadeClassifier faceCascade;
+
+int init() {
+  if (!device_is_ready(display_dev)) {
+    LOG_ERR("Display device not ready, aborting test");
+    return -ENODEV;
+  }
+
+  if (!device_is_ready(video_dev)) {
+    LOG_ERR("Video device not ready, aborting test");
+    return -ENODEV;
+  }
+
+  if (!device_is_ready(jpeg_dev)) {
+    printf("%s JPEG device not ready", jpeg_dev->name);
+    return -ENODEV;
+  }
+
+#if DT_NODE_EXISTS(DT_ALIAS(led0))
+  if (!gpio_is_ready_dt(&led)) {
+    return -ENODEV;
+  }
+
+  if (gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE) < 0) {
+    return -ENODEV;
+  }
+#endif
+
+  cv::setNumThreads(1);
+  cv::setUseOptimized(false);
+
+  if (false ==
+      loadCascade(faceCascade, cascade_face_data(), cascade_face_len())) {
+    return -3;
+  }
+
+  Video::setup();
+
+  dummy_canvas = lv_canvas_create(NULL);
+  screen_canvas = lv_canvas_create(lv_screen_active());
+  lv_canvas_fill_bg(screen_canvas, lv_color_hex3(0xccc), LV_OPA_COVER);
+  lv_obj_center(screen_canvas);
+
+#if INPUT_PREPROCESS_OPENCV
+  lvgl_image = lv_img_create(lv_scr_act());
+  lv_obj_center(lvgl_image);
+#endif
+
+  display_blanking_off(display_dev);
+
+  ROIRectFace =
+      allocLvROIRect(lv_scr_act(), 4, lv_palette_main(LV_PALETTE_GREEN));
+
+  return 0;
+}
+
+int loop() {
+  struct video_buffer vbuf {};
+  struct video_buffer *vbuf_ptr = &vbuf;
+  struct jpeg_out_prop jpeg_prop;
+
+  vbuf_ptr->type = VIDEO_BUF_TYPE_OUTPUT;
+
+  int err = video_dequeue(video_dev, &vbuf_ptr, K_FOREVER);
+  if (err) {
+    LOG_ERR("Unable to dequeue video buf");
+    return 0;
+  }
+
+  // jpeg_hw_decode(jpeg_dev, (uint8_t *)vbuf_ptr->buffer, vbuf_ptr->bytesused,
+  // jpeg_frame_buffer);
+
+  jpeg_hw_poll(jpeg_dev, 0, &jpeg_prop);
+
+  // printf("JPEG done w = %d, h = %d, color = %d chroma = %d\n",
+  // jpeg_prop.width,
+  //         jpeg_prop.height, jpeg_prop.color_space, jpeg_prop.chroma);
+
+  jpeg_color_convert_helper(jpeg_dev, &jpeg_prop, vbuf_ptr->buffer,
+                            fullFrameBuffer);
+
+  // TODO: matGraySmall can be dynamically allocated, and freed after face
+  // detection stage passed. That will free some resources for smile detection
+  // phase
+  cv::Mat matGraySmall(THUMBNAIL_FRAME_HEIGHT, THUMBNAIL_FRAME_WIDTH, CV_8UC1,
+                       thumbnailFrameBuffer);
+
+// TODO hide logic below into utils.cpp
+// when INPUT_PREPROCESS_OPENCV==1 that doesn't allow flipping at the moment,
+// so not all cameras would work
+#if INPUT_PREPROCESS_OPENCV
+  cv::Rect crop;
+  crop.width = ROI_FRAME_WIDTH;
+  crop.height = ROI_FRAME_HEIGHT;
+  crop.x = (matGrayFull.cols - crop.width) / 2;
+  crop.y = crop.height;
+  cv::Mat matCrop = matGrayFull(crop);
+  matCrop.copyTo(matGrayRoi);
+  cv::resize(matGrayRoi, matGraySmall,
+             cv::Size(THUMBNAIL_FRAME_WIDTH, THUMBNAIL_FRAME_HEIGHT), 0.0f,
+             0.0f, cv::INTER_NEAREST);
+
+  displayFrame(lvgl_image, thumbnailFrameBuffer,
+               lvgl::Size(THUMBNAIL_FRAME_WIDTH, THUMBNAIL_FRAME_HEIGHT),
+               LV_COLOR_FORMAT_L8);
+#else
+  cropFullFrameToRoi(dummy_canvas, fullFrameBuffer, roiFrameBuffer,
+                     lvgl::Size(FULL_FRAME_WIDTH, FULL_FRAME_HEIGHT),
+                     lvgl::Size(ROI_FRAME_WIDTH, ROI_FRAME_HEIGHT),
+                     FULL_FRAME_COLOR_FORMAT, LV_COLOR_FORMAT_L8,
+                     FULL_FRAME_FLIP_Y);
+
+  fitRoiFrameToThumbnail(
+      screen_canvas, roiFrameBuffer, thumbnailFrameBuffer,
+      lvgl::Size(ROI_FRAME_WIDTH, ROI_FRAME_HEIGHT),
+      lvgl::Size(THUMBNAIL_FRAME_WIDTH, THUMBNAIL_FRAME_HEIGHT),
+      LV_COLOR_FORMAT_L8, LV_COLOR_FORMAT_L8);
+
+#endif /* #if INPUT_PREPROCESS_OPENCV */
+  lv_task_handler();
+
+  // Return buffer back, we don't need it anymore, thank you
+  err = video_enqueue(video_dev, vbuf_ptr);
+  if (err) {
+    LOG_ERR("Unable to requeue video buf");
+    return 0;
+  }
+
+  cv::equalizeHist(matGraySmall, matGraySmall);
+  auto rects = detectFace(faceCascade, matGraySmall);
+
+  lv_obj_t *draw_widget = screen_canvas;
+#if INPUT_PREPROCESS_OPENCV
+  draw_widget = lvgl_image;
+#endif
+
+  cv::Rect face;
+  if (rects.size()) {
+    lv_obj_remove_flag(ROIRectFace, LV_OBJ_FLAG_HIDDEN);
+
+    face = rects[0];
+    lv_obj_align_to(ROIRectFace, draw_widget, LV_ALIGN_TOP_LEFT, face.x,
+                    face.y);
+    lv_obj_set_size(ROIRectFace, face.width, face.height);
+#if DT_NODE_EXISTS(DT_ALIAS(led0))
+    gpio_pin_set_dt(&led, 0);
+#endif
+  } else {
+    lv_obj_add_flag(ROIRectFace, LV_OBJ_FLAG_HIDDEN);
+  }
+
+  k_msleep(1);
+
+  return 0;
+}
