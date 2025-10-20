@@ -37,3 +37,18 @@ target_sources(app PRIVATE
     src/lvgl_video_app.cpp
 )
 endif()
+
+execute_process(
+    COMMAND git describe --always --dirty
+    OUTPUT_VARIABLE GIT_REVISION
+)
+
+string(REGEX REPLACE "\n$" "" GIT_REVISION "${GIT_REVISION}")
+
+configure_file(
+    src/version.h.in
+    src/version.h
+    @ONLY
+)
+
+target_include_directories(app PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/src")
