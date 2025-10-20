@@ -10,13 +10,15 @@
 #include <zephyr/drivers/video-controls.h>
 #include <zephyr/drivers/video.h>
 #include <zephyr/kernel.h>
-#include <zephyr/logging/log.h>
 
 #define CONFIG_VIDEO_WIDTH 160
 #define CONFIG_VIDEO_HEIGHT 120
 
 #include "grinreflex.h"
+#include "version.h"
 
+#define LOG_LEVEL CONFIG_LOG_DEFAULT_LEVEL
+#include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 
 #if !DT_HAS_CHOSEN(zephyr_camera)
@@ -28,6 +30,7 @@ LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 #endif
 
 int main(void) {
+  LOG_INF("Git revision : %s", GIT_REVISION);
   init();
 
   while (1) {
