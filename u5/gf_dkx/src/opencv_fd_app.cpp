@@ -159,9 +159,15 @@ int loop() {
   cv::Mat matGrayRoi(ROI_FRAME_HEIGHT, ROI_FRAME_WIDTH, CV_8UC1,
                      roiFrameBuffer);
 
+  // TODO: matGraySmall can be dynamically allocated, and freed after face
+  // detection stage passed. That will free some resources for smile detection
+  // phase
   cv::Mat matGraySmall(THUMBNAIL_FRAME_HEIGHT, THUMBNAIL_FRAME_WIDTH, CV_8UC1,
                        thumbnailFrameBuffer);
 
+// TODO hide logic below into utils.cpp
+// when INPUT_PREPROCESS_OPENCV==1 that doesn't allow flipping at the moment,
+// so not all cameras would work
 #if INPUT_PREPROCESS_OPENCV
   cv::Rect crop;
   crop.width = ROI_FRAME_WIDTH;
@@ -206,6 +212,7 @@ int loop() {
   cv::Rect faceROIMax(0, 0, smileCascadeSize.width * 2,
                       smileCascadeSize.height * 2);
 
+  // That pipeline can be static, no need to create it each iteration
   auto sigmaX = Range<float>{0.85, 0.85, 0.01};
   BlurStage blurStage = BlurStage(sigmaX);
 
@@ -226,7 +233,7 @@ int loop() {
       .setNextStage(&blurStage)
       .setNextStage(nullptr);
 
-  //cv::equalizeHist(matGraySmall, matGraySmall);
+  cv::equalizeHist(matGraySmall, matGraySmall);
   auto rects = detectFaceAndSmile(faceCascade, smileCascade, matGraySmall,
                                   matGrayRoi, faceROIMax, claheStage);
 
@@ -256,13 +263,15 @@ int loop() {
       lv_obj_set_size(ROIRectSmile, smile.width, smile.height);
 
       lv_obj_remove_flag(ROIRectSmile, LV_OBJ_FLAG_HIDDEN);
-#if DT_NODE_EXISTS(DT_ALIAS(led0))
-      gpio_pin_toggle_dt(&led);
-#endif
     }
+#if DT_NODE_EXISTS(DT_ALIAS(led0))
+    gpio_pin_set_dt(&led, 0);
+#endif
   } else {
     lv_obj_add_flag(ROIRectSmile, LV_OBJ_FLAG_HIDDEN);
   }
+
+  k_msleep(1);
 
   return 0;
 }

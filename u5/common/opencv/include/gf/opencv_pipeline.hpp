@@ -37,7 +37,7 @@ template <class T> struct Range {
 
 class Stage {
 public:
-  using InvokeCallback = std::function<bool(cv::Mat &)>;
+  using InvokeCallback = std::function<bool(Stage &, cv::Mat &)>;
   explicit Stage() = default;
   virtual ~Stage() = default;
 
@@ -60,6 +60,8 @@ public:
   virtual cv::Mat get() = 0;
   virtual void next() = 0;
   virtual bool hasNext() = 0;
+  virtual void reset() = 0;
+  virtual void dump() {};
 
   Stage &setNextStage(Stage *nextStage);
   bool invoke(cv::Mat &in, InvokeCallback callback);
@@ -89,6 +91,7 @@ public:
   cv::Mat get() override;
   void next() override;
   bool hasNext() override;
+  void reset() override;
 
 private:
   Range<float> &clipLimit;
@@ -107,6 +110,7 @@ public:
   cv::Mat get() override;
   void next() override;
   bool hasNext() override;
+  void reset() override;
 
 private:
   Range<int> &d;
@@ -126,6 +130,7 @@ public:
   cv::Mat get() override;
   void next() override;
   bool hasNext() override;
+  void reset() override;
 
 private:
   Range<float> &gamma;
@@ -141,6 +146,7 @@ public:
   cv::Mat get() override;
   void next() override;
   bool hasNext() override;
+  void reset() override;
 
 private:
   Range<float> &sigmaX;

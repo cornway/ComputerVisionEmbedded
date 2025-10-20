@@ -9,13 +9,17 @@ Stage &Stage::setNextStage(Stage *_nextStage) {
 }
 
 bool Stage::invoke(cv::Mat &_in, InvokeCallback callback) {
-  if (!nextStage) {
-    return callback(_in);
-  }
+  reset();
   setInput(_in);
   for (auto mat : *this) {
-    if (nextStage->invoke(mat, callback)) {
-      return true;
+    if (nextStage) {
+      if (nextStage->invoke(mat, callback)) {
+        return true;
+      }
+    } else {
+      if (callback(*this, mat)) {
+        return true;
+      }
     }
   }
   return false;
@@ -24,11 +28,7 @@ bool Stage::invoke(cv::Mat &_in, InvokeCallback callback) {
 void Stage::setInput(cv::Mat &_in) { in = _in; }
 
 ClaheStage::ClaheStage(Range<float> &clipLimit, Range<int> &tileSize)
-    : clipLimit(clipLimit), tileSize(tileSize) {
-
-  clipLimitIt = clipLimit.begin();
-  tileSizeIt = tileSize.begin();
-}
+    : clipLimit(clipLimit), tileSize(tileSize) {}
 
 cv::Mat ClaheStage::get() {
   cv::Ptr<cv::CLAHE> clahe =
@@ -50,14 +50,14 @@ bool ClaheStage::hasNext() {
   return (clipLimitIt != clipLimit.end()) && (tileSizeIt != tileSize.end());
 }
 
+void ClaheStage::reset() {
+  clipLimitIt = clipLimit.begin();
+  tileSizeIt = tileSize.begin();
+}
+
 BilateralStage::BilateralStage(Range<int> &d, Range<float> &sigmaColor,
                                Range<float> &sigmaSpace)
-    : d(d), sigmaColor(sigmaColor), sigmaSpace(sigmaSpace) {
-
-  dIt = d.begin();
-  sigmaColorIt = sigmaColor.begin();
-  sigmaSpaceIt = sigmaSpace.begin();
-}
+    : d(d), sigmaColor(sigmaColor), sigmaSpace(sigmaSpace) {}
 
 cv::Mat BilateralStage::get() {
   cv::Mat out;
@@ -82,9 +82,13 @@ bool BilateralStage::hasNext() {
          (sigmaSpaceIt != sigmaSpace.end());
 }
 
-GammaStage::GammaStage(Range<float> &gamma) : gamma(gamma) {
-  gammaIt = gamma.begin();
+void BilateralStage::reset() {
+  dIt = d.begin();
+  sigmaColorIt = sigmaColor.begin();
+  sigmaSpaceIt = sigmaSpace.begin();
 }
+
+GammaStage::GammaStage(Range<float> &gamma) : gamma(gamma) {}
 
 cv::Mat GammaStage::get() {
   cv::Mat out = in.clone();
@@ -98,9 +102,9 @@ void GammaStage::next() { gammaIt = ++gammaIt; }
 
 bool GammaStage::hasNext() { return (gammaIt != gamma.end()); }
 
-BlurStage::BlurStage(Range<float> &sigmaX) : sigmaX(sigmaX) {
-  sigmaXIt = sigmaX.begin();
-}
+void GammaStage::reset() { gammaIt = gamma.begin(); }
+
+BlurStage::BlurStage(Range<float> &sigmaX) : sigmaX(sigmaX) {}
 
 cv::Mat BlurStage::get() {
   cv::Mat blurFrame;
@@ -114,5 +118,7 @@ cv::Mat BlurStage::get() {
 void BlurStage::next() { sigmaXIt = ++sigmaXIt; }
 
 bool BlurStage::hasNext() { return (sigmaXIt != sigmaX.end()); }
+
+void BlurStage::reset() { sigmaXIt = sigmaX.begin(); }
 
 } // namespace gf_cv

@@ -83,8 +83,7 @@ detectFaceAndSmile(cv::CascadeClassifier &faceCascade,
 
   const double scaleFactor = 1.04;
   const int minNeighbors = 3;
-  const int flags =
-      cv::CASCADE_FIND_BIGGEST_OBJECT | cv::CASCADE_DO_ROUGH_SEARCH;
+  const int flags = cv::CASCADE_FIND_BIGGEST_OBJECT;
 
   // cv::equalizeHist(thumbnailFrame, thumbnailFrame);
   std::vector<cv::Rect> faceRects;
@@ -130,9 +129,10 @@ detectFaceAndSmile(cv::CascadeClassifier &faceCascade,
 
       std::vector<cv::Rect> smileRects;
 
-      pipeline.invoke(faceROIFrameResized, [&](cv::Mat &in) -> bool {
-         return detectSmile(smileCascade, in, smileRects);
-      });
+      pipeline.invoke(faceROIFrameResized,
+                      [&](Stage &stage, cv::Mat &in) -> bool {
+                        return detectSmile(smileCascade, in, smileRects);
+                      });
 
       // detectSmile(smileCascade, faceROIFrameResized, smileRects,
       //             roIKernelParamsSweep);
