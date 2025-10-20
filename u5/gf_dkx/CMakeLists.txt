@@ -29,13 +29,19 @@ target_sources(app PRIVATE
 include(${ZEPHYR_BASE}/samples/subsys/usb/common/common.cmake)
 
 if (CONFIG_OPENCV_LIB)
-target_sources(app PRIVATE
-    src/opencv_fd_app.cpp
-)
+    if (CONFIG_VARIAND_FACE_DETECT_ONLY)
+        target_sources(app PRIVATE
+            src/opencv_fd_only_app.cpp
+        )
+    else()
+        target_sources(app PRIVATE
+            src/opencv_fd_app.cpp
+        )
+    endif()
 else()
-target_sources(app PRIVATE
-    src/lvgl_video_app.cpp
-)
+    target_sources(app PRIVATE
+        src/lvgl_video_app.cpp
+    )
 endif()
 
 execute_process(

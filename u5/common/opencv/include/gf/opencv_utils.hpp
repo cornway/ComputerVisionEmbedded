@@ -32,6 +32,22 @@ std::vector<cv::Rect> detectFaceAndSmile(cv::CascadeClassifier &faceCascade,
                                          cv::Mat &fullFrame,
                                          cv::Rect &faceROIMax, Stage &pipeline);
 
+/**
+ * @brief
+ *
+ * @param faceCascade
+ * @param thumbnailFrame
+ * @return std::vector<cv::Rect>
+ */
+std::vector<cv::Rect> detectFace(cv::CascadeClassifier &faceCascade,
+                                 cv::Mat &thumbnailFrame);
+
+/**
+ * @brief
+ *
+ * @param bgr
+ * @return cv::Mat
+ */
 cv::Mat cv_preprocessForQR(const cv::Mat &bgr);
 
 /**
