@@ -1,0 +1,7 @@
+# STM32N657X0_Q Nucleo board configuration
+
+# Copyright (c) 2024 STMicroelectronics
+# SPDX-License-Identifier: Apache-2.0
+
+config BOARD_GRINREFLEX_N6_DK3
+	select SOC_STM32N657XX
