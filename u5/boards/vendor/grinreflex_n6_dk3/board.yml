@@ -1,0 +1,8 @@
+board:
+  name: grinreflex_n6_dk3
+  full_name: Grinreflex N6 DK3 from Nucleo N657X0-Q
+  vendor: grinreflex
+  socs:
+    - name: stm32n657xx
+      variants:
+        - name: sb

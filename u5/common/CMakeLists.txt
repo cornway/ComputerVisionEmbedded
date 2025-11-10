@@ -10,11 +10,18 @@ endif()
 
 target_include_directories(app PUBLIC include)
 
+if (CONFIG_VIDEO)
+target_sources(app PRIVATE
+    src/video.cpp
+)
+endif()
+
+if (CONFIG_LVGL)
 target_sources(app PRIVATE
     src/lvgl_utils.cpp
-    src/video.cpp
     src/utils.cpp
 )
+endif()
 
 dt_has_chosen(USART2 PROPERTY "zephyr_usart2")
 
