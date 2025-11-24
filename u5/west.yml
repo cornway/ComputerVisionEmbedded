@@ -11,12 +11,12 @@ manifest:
   remotes:
     - name: upstream
       url-base: https://github.com/zephyrproject-rtos/
-    - name: zephyrproject-rtos
+    - name: origin
       url-base: https://github.com/cornway/
 
   projects:
     - name: zephyr
-      remote: zephyrproject-rtos
+      remote: origin
       revision: roman/development
       import:
         # By using name-allowlist we can clone only the modules that are
@@ -26,3 +26,8 @@ manifest:
           - hal_stm32
           - tflite-micro
           - lvgl
+          - mbedtls
+    - name: mcuboot
+      remote: origin
+      revision: roman/development
+      path: bootloader/mcuboot

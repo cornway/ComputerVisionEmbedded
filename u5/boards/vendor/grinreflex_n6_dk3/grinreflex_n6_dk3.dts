@@ -8,6 +8,10 @@
 #include "grinreflex_n6_dk3_common.dtsi"
 
 / {
-	model = "STMicroelectronics STM32N657X0-Q-NUCLEO board";
-	compatible = "st,stm32n657x0-q-nucleo";
+	model = "Grinreflex N6 DK3";
+	compatible = "gf,grinreflex-n6-dk3";
+
+	chosen {
+		zephyr,sram = &axisram1;
+	};
 };
