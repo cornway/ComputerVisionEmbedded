@@ -15,6 +15,9 @@
 		zephyr,shell-uart = &usart1;
 		zephyr,sram = &axisram2;
 		spi-flash0 = &mx25um51245g;
+		zephyr,flash-controller = &mx25um51245g;
+		zephyr,flash = &mx25um51245g;
+		zephyr,code-partition = &slot0_partition;
 	};
 
 	aliases {
@@ -148,7 +151,7 @@
 	mx25um51245g: ospi-nor-flash@0 {
 		compatible = "st,stm32-xspi-nor";
 		reg = <0>;
-		size = <DT_SIZE_M(512)>; /* 512 Mbits */
+		size = <DT_SIZE_M(128)>; /* 128 Mbits */
 		ospi-max-frequency = <DT_FREQ_M(200)>;
 		spi-bus-width = <XSPI_OCTO_MODE>;
 		data-rate = <XSPI_DTR_TRANSFER>;
@@ -160,9 +163,27 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 
-			storage_partition: partition@3ff0000 {
+			/*
+			 * Following flash partition is dedicated to the use of bootloader
+			 */
+			boot_partition: partition@0 {
+				label = "mcuboot";
+				reg = <0x00000000 DT_SIZE_K(256)>;
+			};
+
+			slot0_partition: partition@40000 {
+				label = "image-0";
+				reg = <0x40000 DT_SIZE_K(1536)>;
+			};
+
+			slot1_partition: partition@240000 {
+				label = "image-1";
+				reg = <0x240000 DT_SIZE_K(1536)>;
+			};
+
+			storage_partition: partition@440000 {
 				label = "storage";
-				reg = <0x3ff0000 DT_SIZE_K(64)>;
+				reg = <0x440000 DT_SIZE_K(64)>;
 			};
 		};
 	};

@@ -1,0 +1,3 @@
+choice BOOTLOADER
+	default BOOTLOADER_MCUBOOT
+endchoice
