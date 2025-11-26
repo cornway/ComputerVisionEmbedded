@@ -15,3 +15,27 @@
 		zephyr,sram = &axisram1;
 	};
 };
+
+&st7735r_160x80 {
+	status = "disabled";
+};
+
+&jpeg0 {
+	status = "disabled";
+};
+
+&gpdma1 {
+	status = "disabled";
+};
+
+&ov2640 {
+	status = "disabled";
+};
+
+&zephyr_camera_dvp {
+	status = "disabled";
+};
+
+&mco1 {
+	status = "disabled";
+};

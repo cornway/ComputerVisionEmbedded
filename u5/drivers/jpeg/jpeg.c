@@ -15,7 +15,14 @@
 
 #include <app/drivers/jpeg.h>
 #include <stm32_ll_dma.h>
+
+#if defined(CONFIG_SOC_SERIES_STM32N6X)
+#include <stm32n6xx_hal.h>
+#elif defined(CONFIG_SOC_SERIES_STM32U5X)
 #include <stm32u5xx_hal.h>
+#else
+#error "JPEG: soc is not supported yet"
+#endif
 
 #include "jpeg_utils.h"
 

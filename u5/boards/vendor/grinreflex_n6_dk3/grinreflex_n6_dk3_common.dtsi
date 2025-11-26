@@ -18,9 +18,81 @@
 		zephyr,flash-controller = &mx25um51245g;
 		zephyr,flash = &mx25um51245g;
 		zephyr,code-partition = &slot0_partition;
+		zephyr,jpeg = &jpeg0;
+		zephyr,display = &st7735r_160x80;
+		zephyr,camera = &zephyr_camera_dvp;
 	};
 
 	aliases {
+	};
+
+	mipi_dbi_st7735r_160x80 {
+		compatible = "zephyr,mipi-dbi-spi";
+		spi-dev = <&spi4>;
+		dc-gpios = <&gpioc 5 GPIO_ACTIVE_HIGH>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		st7735r_160x80: st7735r@0 {
+			compatible = "sitronix,st7735r";
+			mipi-max-frequency = <20000000>;
+			mipi-mode = "MIPI_DBI_MODE_SPI_4WIRE";
+			reg = <0>;
+			width = <160>;
+			height = <80>;
+			inversion-on;
+			rgb-is-inverted;
+			x-offset = <1>;
+			y-offset = <26>;
+			pwctr1 = [A2 02 84];
+			pwctr2 = [C5];
+			pwctr3 = [0A 00];
+			pwctr4 = [8A 2A];
+			pwctr5 = [8A EE];
+			invctr = <7>;
+			frmctr1 = [01 2C 2D];
+			frmctr2 = [01 2C 2D];
+			frmctr3 = [01 2C 2D 01 2C 2D];
+			vmctr1 = <14>;
+			gamctrp1 = [02 1C 07 12 37 32 29 2D 29 25 2B 39 00 01 03 10];
+			gamctrn1 = [03 1D 07 06 2E 2C 29 2D 2E 2E 37 3F 00 00 02 10];
+			colmod = <5>;
+			/* Set D3 (RGB) bit to 1. LV_COLOR_16_SWAP is enabled by default */
+			madctl = <184>; /* Set to <184> to rotate the image 180 degrees. */
+			caset = [00 01 00 a0];
+			raset = [00 1a 00 69];
+		};
+	};
+
+	dcmi_camera_connector: connector_dcmi_camera {
+		compatible = "weact,dcmi-camera-connector";
+		#gpio-cells = <2>;
+		gpio-map-mask = <0xffffffff 0xffffffc0>;
+		gpio-map-pass-thru = <0 0x3f>;
+
+		gpio-map = <3  0 &gpioc 1  0>,  /* DVP_SDA (I2C2_SDA)*/
+			   <5  0 &gpioh 9  0>,  /* DVP_SCL (I2C2_SCL)*/
+			   <7  0 &gpioe 6  0>,  /* DVP_VSYNC*/
+			   <8  0 &gpioc 4  0>,  /* DVP_PWDN NC*/
+			   <9  0 &gpioc 0  0>,  /* DVP_HSYNC*/
+			   <12 0 &gpiof 1  0>,  /* DVP_D7*/
+			   <13 0 &gpioa 8  0>,  /* DVP_XCLK (RCC_MCO1)*/
+			   <14 0 &gpiof 5  0>,  /* DVP_D6*/
+			   <16 0 &gpioe 4  0>,  /* DVP_D5*/
+			   <17 0 &gpioa 6  0>,  /* DVP_PCLK*/
+			   <18 0 &gpioc 11 0>,  /* DVP_D4*/
+			   <19 0 &gpioa 1  0>,  /* DVP_D0*/
+			   <20 0 &gpioc 9  0>,  /* DVP_D3 */
+			   <21 0 &gpioa 10 0>,  /* DVP_D1 */
+			   <22 0 &gpioc 3  0>;  /* DVP_D2 */
+	};
+
+	jpeg0: jpeg_hw {
+		compatible = "st,jpeg-hw";
+		dmas = <&gpdma1 2 1 (STM32_DMA_PERIPH_RX | STM32_DMA_PERIPH_32BITS | STM32_DMA_MEM_32BITS)
+				&gpdma1 3 0 (STM32_DMA_PERIPH_TX | STM32_DMA_PERIPH_32BITS | STM32_DMA_MEM_32BITS)>;
+		dma-names = "tx", "rx";
+		status = "okay";
 	};
 };
 
@@ -102,6 +174,16 @@
 	timg-prescaler = <2>;
 };
 
+&gpioc {
+	status = "okay";
+
+	lcd_led {
+		gpio-hog;
+		gpios = <6 GPIO_ACTIVE_LOW>;
+		output-high;
+	};
+};
+
 &i2c1 {
 	clocks = <&rcc STM32_CLOCK(APB1, 21)>,
 		 <&rcc STM32_SRC_CKPER I2C1_SEL(1)>;
@@ -109,12 +191,29 @@
 	pinctrl-names = "default";
 	clock-frequency = <I2C_BITRATE_STANDARD>;
 	status = "okay";
+
+	ov2640: ov2640@30 {
+		compatible = "ovti,ov2640";
+		reg = <0x30>;
+
+		supply-gpios = <&dcmi_camera_connector 8 GPIO_ACTIVE_HIGH>;
+		clock-rate-control = <0x80>;
+
+		status = "okay";
+
+		port {
+			ov2640_ep_out: endpoint {
+				remote-endpoint-label = "zephyr_camera_dvp_in";
+			};
+		};
+	};
 };
 
 &spi4 {
 	clocks = <&rcc STM32_CLOCK(APB2, 20)>,
 		 <&rcc STM32_SRC_CKPER SPI5_SEL(1)>;
 	pinctrl-0 = <&spi4_sck_pe2 &spi4_mosi_pb7>;
+	cs-gpios = <&gpioe 7 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 	pinctrl-names = "default";
 	status = "okay";
 };
@@ -187,4 +286,53 @@
 			};
 		};
 	};
+};
+
+&gpdma1 {
+	status = "okay";
+};
+
+zephyr_camera_dvp: &dcmi {
+	pinctrl-0 = <&dcmi_hsync_pc0
+				&dcmi_pixclk_pa6
+				&dcmi_vsync_pe6
+		     	&dcmi_d0_pa1
+				&dcmi_d1_pa10
+				&dcmi_d2_pc3
+				&dcmi_d3_pc9
+		     	&dcmi_d4_pc11
+				&dcmi_d5_pe4
+				&dcmi_d6_pf5
+				&dcmi_d7_pf1>;
+	pinctrl-names = "default";
+
+	port {
+		zephyr_camera_dvp_in: endpoint {
+			remote-endpoint-label = "ov2640_ep_out";
+			bus-width = <8>;
+			hsync-active = <0>;
+			vsync-active = <0>;
+			pclk-sample = <1>;
+		};
+	};
+	status = "okay";
+};
+
+
+/* See reference manual (RM0486 Rev 2) page 433:
+ *   4: HSE48 clock selected (hse_ck)
+ */
+#define MCO1_SEL_HSE48 4
+
+ /* See reference manual (RM0486 Rev 2) page 531:
+  *   0011: division by 4
+  */
+#define MCO1_PRE_DIV_4 3
+
+&mco1 {
+	status = "okay";
+	clocks = <&rcc MCO1_SEL_HSE48 MCO1_SEL(MCO1_SEL_HSE48)>;
+	prescaler = <MCO1_PRE(MCO1_PRE_DIV_4)>;
+	pinctrl-0 = <&rcc_mco_1_pa8>;
+	pinctrl-names = "default";
 };

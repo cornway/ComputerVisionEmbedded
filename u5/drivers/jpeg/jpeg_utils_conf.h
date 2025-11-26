@@ -17,8 +17,16 @@
 
 /* Includes ------------------------------------------------------------------*/
 
+#if defined(CONFIG_SOC_SERIES_STM32N6X)
+#include <stm32n6xx_hal.h>
+#include <stm32n6xx_hal_jpeg.h>
+#elif defined(CONFIG_SOC_SERIES_STM32U5X)
 #include "stm32u5xx_hal.h"
 #include "stm32u5xx_hal_jpeg.h"
+#else
+#error "JPEG: soc is not supported yet"
+#endif
+
 
 /* Private define ------------------------------------------------------------*/
 /** @addtogroup JPEG_Private_Defines

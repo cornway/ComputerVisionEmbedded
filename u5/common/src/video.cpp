@@ -1,7 +1,5 @@
 
 
-#include <lvgl.h>
-#include <lvgl_input_device.h>
 #include <zephyr/drivers/display.h>
 
 #include "gf/video.hpp"
@@ -32,7 +30,6 @@ void setup() {
   int i = 0;
   int err;
 
-  video_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_camera));
   if (!device_is_ready(video_dev)) {
     LOG_ERR("%s device is not ready", video_dev->name);
     return;

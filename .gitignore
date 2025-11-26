@@ -3,3 +3,4 @@ zephyr
 build
 modules
 .vscode
+bootloader

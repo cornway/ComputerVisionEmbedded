@@ -6,7 +6,8 @@ For a fresh start
 * `git submodule init --update`
 * `west init -l u5`
 * `west update`
-* `west build -b stm32u5g9j_dk2 u5/app/ -- -DBOARD_ROOT=./../` (builds for stm32u5g9j_dk2 board, you can google what that board is)
+# Outdated
+* `west build -b stm32u5g9j_dk2 u5/app/` (builds for stm32u5g9j_dk2 board, you can google what that board is)
 * `west flash`
 
 ### Important note: since stm32u5g9j_dk2 doesn't have camera sensor, you need to find out your own way how to transfer images to the board; I used uart for that purpose
