@@ -7,3 +7,4 @@ board:
       variants:
         - name: fsbl
         - name: fsbl_app
+        - name: app

@@ -210,11 +210,12 @@
 };
 
 &spi4 {
-	clocks = <&rcc STM32_CLOCK(APB2, 20)>,
-		 <&rcc STM32_SRC_CKPER SPI5_SEL(1)>;
+	clocks = <&rcc STM32_CLOCK(APB2, 13)>,
+		 <&rcc STM32_SRC_CKPER SPI4_SEL(1)>;
 	pinctrl-0 = <&spi4_sck_pe2 &spi4_mosi_pb7>;
 	cs-gpios = <&gpioe 7 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 	pinctrl-names = "default";
+	clock-frequency = <DT_FREQ_M(66)>;
 	status = "okay";
 };
 
@@ -222,15 +223,6 @@
 	clocks = <&rcc STM32_CLOCK(APB2, 4)>,
 		 <&rcc STM32_SRC_CKPER USART1_SEL(1)>;
 	pinctrl-0 = <&usart1_tx_pf13 &usart1_rx_pg8>;
-	pinctrl-names = "default";
-	current-speed = <115200>;
-	status = "okay";
-};
-
-&usart3 {
-	clocks = <&rcc STM32_CLOCK(APB1, 18)>,
-		 <&rcc STM32_SRC_CKPER USART3_SEL(1)>;
-	pinctrl-0 = <&usart3_tx_pd8 &usart3_rx_pd9>;
 	pinctrl-names = "default";
 	current-speed = <115200>;
 	status = "okay";
