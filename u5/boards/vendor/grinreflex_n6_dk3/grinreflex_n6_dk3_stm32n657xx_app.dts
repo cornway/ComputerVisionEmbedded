@@ -1,8 +1,17 @@
+/*
+ * Copyright (c) 2025 STMicroelectronics
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /dts-v1/;
 #include "grinreflex_n6_dk3_common.dtsi"
 
 / {
 	model = "Grinreflex N6 DK3";
-	compatible = "gf,grinreflex-n6-dk3-fsbl";
+	compatible = "gf,grinreflex-n6-dk3";
+
+	chosen {
+		zephyr,sram = &axisram1;
+	};
 };
