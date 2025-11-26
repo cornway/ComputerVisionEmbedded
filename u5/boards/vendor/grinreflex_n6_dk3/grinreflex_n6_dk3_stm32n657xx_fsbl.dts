@@ -6,3 +6,27 @@
 	model = "Grinreflex N6 DK3";
 	compatible = "gf,grinreflex-n6-dk3-fsbl";
 };
+
+&st7735r_160x80 {
+	status = "disabled";
+};
+
+&jpeg0 {
+	status = "disabled";
+};
+
+&gpdma1 {
+	status = "disabled";
+};
+
+&ov2640 {
+	status = "disabled";
+};
+
+&zephyr_camera_dvp {
+	status = "disabled";
+};
+
+&mco1 {
+	status = "disabled";
+};
