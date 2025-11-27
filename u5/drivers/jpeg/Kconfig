@@ -6,8 +6,6 @@ config STM32_JPEG
 	bool "STM32 JPEG HW decoder device drivers"
     default n
 
-    # depends on DMA_STM32
-
     select USE_STM32_HAL_DMA
     select USE_STM32_HAL_JPEG
     select USE_STM32_HAL_CORTEX

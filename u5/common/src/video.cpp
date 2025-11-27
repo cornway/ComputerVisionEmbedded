@@ -1,5 +1,6 @@
 
 
+#include <zephyr/drivers/video.h>
 #include <zephyr/drivers/display.h>
 
 #include "gf/video.hpp"
@@ -14,10 +15,14 @@ static const struct device *video_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_camera));
 static struct video_buffer *buffers[2];
 
 #if defined(CONFIG_GRINREFLEX_JPEG_VIDEO)
+#define SECOND_BUFFER_SIZE (CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * 2)
+#else
+#define SECOND_BUFFER_SIZE (CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * 2)
+#endif
+
 static struct video_buffer second_buffer {};
 __attribute__((aligned(32)))
-static uint8_t video_large_buffer[CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * 2];
-#endif
+static uint8_t video_large_buffer[SECOND_BUFFER_SIZE];
 
 void setup() {
   struct video_format fmt;
@@ -127,7 +132,6 @@ void setup() {
   /* Size to allocate for each buffer */
   bsize = fmt.pitch * fmt.height;
 
-#if defined(CONFIG_GRINREFLEX_JPEG_VIDEO)
   bsize = CONFIG_VIDEO_BUFFER_POOL_SZ_MAX;
 
   buffers[0] = video_buffer_aligned_alloc(bsize, CONFIG_VIDEO_BUFFER_POOL_ALIGN,
@@ -145,25 +149,7 @@ void setup() {
   buffers[1]->buffer = video_large_buffer;
   buffers[1]->size = sizeof(video_large_buffer);
 
-  if (buffers[1]->buffer == NULL) {
-    LOG_ERR("Unable to alloc video buffer");
-    return;
-  }
-
   video_enqueue(video_dev, buffers[1]);
-#else  /* !defined(CONFIG_GRINREFLEX_JPEG_VIDEO) */
-  /* Alloc video buffers and enqueue for capture */
-  for (i = 0; i < ARRAY_SIZE(buffers); i++) {
-    buffers[i] = video_buffer_aligned_alloc(
-        bsize, CONFIG_VIDEO_BUFFER_POOL_ALIGN, K_FOREVER);
-    if (buffers[i] == NULL) {
-      LOG_ERR("Unable to alloc video buffer");
-      return;
-    }
-    buffers[i]->type = type;
-    video_enqueue(video_dev, buffers[i]);
-  }
-#endif /* defined(CONFIG_GRINREFLEX_JPEG_VIDEO) */
 
   /* Set controls */
   struct video_control ctrl = {.id = VIDEO_CID_HFLIP, .val = 1};

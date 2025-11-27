@@ -231,7 +231,7 @@ static int jpeg_hw_init(const struct device *dev) {
   __HAL_RCC_JPEG_CLK_ENABLE();
 
   if (HAL_JPEG_Init(&dev_data->hjpeg) != HAL_OK) {
-    abort();
+    return -EINVAL;
   }
   int ret = 0;
 

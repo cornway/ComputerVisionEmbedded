@@ -73,13 +73,13 @@
 		gpio-map = <3  0 &gpioc 1  0>,  /* DVP_SDA (I2C2_SDA)*/
 			   <5  0 &gpioh 9  0>,  /* DVP_SCL (I2C2_SCL)*/
 			   <7  0 &gpioe 6  0>,  /* DVP_VSYNC*/
-			   <8  0 &gpioc 4  0>,  /* DVP_PWDN NC*/
+			   <8  0 &gpioc 4  0>,  /* DVP_PWDN*/
 			   <9  0 &gpioc 0  0>,  /* DVP_HSYNC*/
 			   <12 0 &gpiof 1  0>,  /* DVP_D7*/
 			   <13 0 &gpioa 8  0>,  /* DVP_XCLK (RCC_MCO1)*/
 			   <14 0 &gpiof 5  0>,  /* DVP_D6*/
 			   <16 0 &gpioe 4  0>,  /* DVP_D5*/
-			   <17 0 &gpioa 6  0>,  /* DVP_PCLK*/
+			   <17 0 &gpiod 5  0>,  /* DVP_PCLK*/
 			   <18 0 &gpioc 11 0>,  /* DVP_D4*/
 			   <19 0 &gpioa 1  0>,  /* DVP_D0*/
 			   <20 0 &gpioc 9  0>,  /* DVP_D3 */
@@ -92,7 +92,7 @@
 		dmas = <&gpdma1 2 1 (STM32_DMA_PERIPH_RX | STM32_DMA_PERIPH_32BITS | STM32_DMA_MEM_32BITS)
 				&gpdma1 3 0 (STM32_DMA_PERIPH_TX | STM32_DMA_PERIPH_32BITS | STM32_DMA_MEM_32BITS)>;
 		dma-names = "tx", "rx";
-		status = "okay";
+		status = "disabled";
 	};
 };
 
@@ -155,6 +155,12 @@
 	status = "okay";
 };
 
+&ic17 {
+	pll-src = <1>;
+	ic-div = <4>;
+	status = "okay";
+};
+
 &perck {
 	clocks = <&rcc STM32_SRC_HSI PER_SEL(0)>;
 	status = "okay";
@@ -182,30 +188,11 @@
 		gpios = <6 GPIO_ACTIVE_LOW>;
 		output-high;
 	};
-};
 
-&i2c1 {
-	clocks = <&rcc STM32_CLOCK(APB1, 21)>,
-		 <&rcc STM32_SRC_CKPER I2C1_SEL(1)>;
-	pinctrl-0 = <&i2c1_scl_ph9 &i2c1_sda_pc1>;
-	pinctrl-names = "default";
-	clock-frequency = <I2C_BITRATE_STANDARD>;
-	status = "okay";
-
-	ov2640: ov2640@30 {
-		compatible = "ovti,ov2640";
-		reg = <0x30>;
-
-		supply-gpios = <&dcmi_camera_connector 8 GPIO_ACTIVE_HIGH>;
-		clock-rate-control = <0x80>;
-
-		status = "okay";
-
-		port {
-			ov2640_ep_out: endpoint {
-				remote-endpoint-label = "zephyr_camera_dvp_in";
-			};
-		};
+	dvp_pwdn {
+		gpio-hog;
+		gpios = <4 GPIO_ACTIVE_LOW>;
+		output-high;
 	};
 };
 
@@ -215,7 +202,7 @@
 	pinctrl-0 = <&spi4_sck_pe2 &spi4_mosi_pb7>;
 	cs-gpios = <&gpioe 7 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 	pinctrl-names = "default";
-	clock-frequency = <DT_FREQ_M(66)>;
+	clock-frequency = <DT_FREQ_M(20)>;
 	status = "okay";
 };
 
@@ -243,7 +230,7 @@
 		compatible = "st,stm32-xspi-nor";
 		reg = <0>;
 		size = <DT_SIZE_M(128)>; /* 128 Mbits */
-		ospi-max-frequency = <DT_FREQ_M(200)>;
+		ospi-max-frequency = <DT_FREQ_M(133)>;
 		spi-bus-width = <XSPI_OCTO_MODE>;
 		data-rate = <XSPI_DTR_TRANSFER>;
 		four-byte-opcodes;
@@ -284,30 +271,80 @@
 	status = "okay";
 };
 
-zephyr_camera_dvp: &dcmi {
-	pinctrl-0 = <&dcmi_hsync_pc0
-				&dcmi_pixclk_pa6
-				&dcmi_vsync_pe6
-		     	&dcmi_d0_pa1
-				&dcmi_d1_pa10
-				&dcmi_d2_pc3
-				&dcmi_d3_pc9
-		     	&dcmi_d4_pc11
-				&dcmi_d5_pe4
-				&dcmi_d6_pf5
-				&dcmi_d7_pf1>;
-	pinctrl-names = "default";
 
-	port {
-		zephyr_camera_dvp_in: endpoint {
-			remote-endpoint-label = "ov2640_ep_out";
-			bus-width = <8>;
-			hsync-active = <0>;
-			vsync-active = <0>;
-			pclk-sample = <1>;
+&i2c1 {
+	clocks = <&rcc STM32_CLOCK(APB1, 21)>,
+		 <&rcc STM32_SRC_CKPER I2C1_SEL(1)>;
+	pinctrl-0 = <&i2c1_scl_ph9 &i2c1_sda_pc1>;
+	pinctrl-names = "default";
+	clock-frequency = <I2C_BITRATE_STANDARD>;
+	status = "okay";
+
+	ov2640: ov2640@30 {
+		compatible = "ovti,ov2640";
+		reg = <0x30>;
+
+		supply-gpios = <&dcmi_camera_connector 8 GPIO_ACTIVE_HIGH>;
+		clock-rate-control = <0x80>;
+
+		status = "okay";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				ov2640_ep_out: endpoint {
+					/* parallel bus */
+					bus-type = <VIDEO_BUS_TYPE_PARALLEL>;     /* MEDIA_BUS_TYPE_PARALLEL */
+					bus-width = <8>;    /* D0..D7 */
+					hsync-active = <0>;
+					vsync-active = <0>;
+					pclk-sample = <1>;
+
+					/* link to DCMIPP endpoint via label */
+					remote-endpoint-label = "zephyr_camera_dvp_in";
+				};
+			};
 		};
 	};
+};
+
+&dcmipp {
+	compatible = "st,stm32-dcmipp";
 	status = "okay";
+
+	pinctrl-0 = <&dcmipp_hsync_pc0
+				&dcmipp_pixclk_pd5
+				&dcmipp_vsync_pe6
+				&dcmipp_d0_pa1
+				&dcmipp_d1_pa10
+				&dcmipp_d2_pc3
+				&dcmipp_d3_pc9
+				&dcmipp_d4_pc11
+				&dcmipp_d5_pe4
+				&dcmipp_d6_pf5
+				&dcmipp_d7_pf1>;
+	pinctrl-names = "default";
+
+	ports {
+		port@0 {
+			reg = <0>;
+			zephyr_camera_dvp_in: endpoint {
+				remote-endpoint-label = "ov2640_ep_out";
+				bus-type = <VIDEO_BUS_TYPE_PARALLEL>;
+				bus-width = <8>;
+				data-shift = <0>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				pclk-sample = <1>;
+			};
+		};
+		port@1 {
+			zephyr_camera_dvp: endpoint@0 { };
+		};
+	};
 };
 
 
