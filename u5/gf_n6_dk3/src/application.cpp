@@ -23,12 +23,15 @@ LOG_MODULE_REGISTER(grinreflex_app);
 #include "gf/lvgl_utils.hpp"
 #include "gf/utils.hpp"
 #include "gf/video.hpp"
-#include "grinreflex.h"
+#include "application.h"
 
 static const struct device *video_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_camera));
 static const struct device *display_dev =
     DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
+
+#if defined(CONFIG_STM32_JPEG)
 const struct device *jpeg_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_jpeg));
+#endif
 
 static uint8_t
     fullFrameBuffer[FULL_FRAME_WIDTH * FULL_FRAME_HEIGHT *
@@ -52,12 +55,12 @@ int init() {
     LOG_ERR("Video device not ready, aborting test");
     return -ENODEV;
   }
-
+#if defined(CONFIG_STM32_JPEG)
   if (!device_is_ready(jpeg_dev)) {
     printf("%s JPEG device not ready", jpeg_dev->name);
     return -ENODEV;
   }
-
+#endif
   Video::setup();
 
   dummy_canvas = lv_canvas_create(NULL);
@@ -66,6 +69,7 @@ int init() {
   lv_obj_center(screen_canvas);
 
   display_blanking_off(display_dev);
+  lv_task_handler();
 
   return 0;
 }
@@ -84,6 +88,7 @@ int loop() {
     return 0;
   }
 
+#if defined(CONFIG_GRINREFLEX_JPEG_VIDEO)
   // jpeg_hw_decode(jpeg_dev, (uint8_t *)vbuf_ptr->buffer, vbuf_ptr->bytesused,
   // jpeg_frame_buffer);
 
@@ -95,6 +100,15 @@ int loop() {
 
   jpeg_color_convert_helper(jpeg_dev, &jpeg_prop, vbuf_ptr->buffer,
                             fullFrameBuffer);
+
+#else
+  memcpy(fullFrameBuffer, vbuf_ptr->buffer, vbuf_ptr->bytesused);
+#endif
+
+  err = video_enqueue(video_dev, vbuf_ptr);
+  if (err) {
+    LOG_ERR("Unable to requeue video buf");
+  }
 
   cropFullFrameToRoi(dummy_canvas, fullFrameBuffer, roiFrameBuffer,
                      lvgl::Size(FULL_FRAME_WIDTH, FULL_FRAME_HEIGHT),
@@ -108,11 +122,6 @@ int loop() {
       lvgl::Size(THUMBNAIL_FRAME_WIDTH, THUMBNAIL_FRAME_HEIGHT),
       LV_COLOR_FORMAT_L8, LV_COLOR_FORMAT_L8);
   lv_task_handler();
-
-  err = video_enqueue(video_dev, vbuf_ptr);
-  if (err) {
-    LOG_ERR("Unable to requeue video buf");
-  }
 
   k_msleep(50);
 
