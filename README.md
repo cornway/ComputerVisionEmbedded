@@ -31,7 +31,7 @@ For a fresh start
 * **grinreflex_dk2** - counterpart of **stm32u5_v2.0** in [HW](https://github.com/cornway/ComputerVisionHw) repo
   * Simplified version of v1.0, unfortunatelly I put there MCU that seems to went out of stock
   * All hardware fetures from V1.0, except - there is no external flash and USB
-* **grinreflex_n6_dk1** - most complicated so far, uses **stm32n6_v1.0** schematic in [HW] (https://github.com/cornway/ComputerVisionHw)
+* **grinreflex_n6_dk1** - most complicated so far, uses **stm32n6_v1.0** schematic in [HW](https://github.com/cornway/ComputerVisionHw)
   * Hw Features
     * LCD serial display
     * OV2640 compatible camera
