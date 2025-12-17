@@ -6,5 +6,6 @@ menu "Custom libraries"
 rsource "cv/Kconfig"
 rsource "tflite/Kconfig"
 rsource "quirc/Kconfig"
+rsource "st_ai_runtime/Kconfig"
 
 endmenu

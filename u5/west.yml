@@ -17,12 +17,13 @@ manifest:
   projects:
     - name: zephyr
       remote: origin
-      revision: roman/development
+      revision: roman/development-n6
       import:
         # By using name-allowlist we can clone only the modules that are
         # strictly needed by the application.
         name-allowlist:
           - cmsis_6    # required by the ARM port for Cortex-M
+          - cmsis-dsp
           - hal_stm32
           - tflite-micro
           - lvgl

@@ -20,7 +20,7 @@
 		zephyr,code-partition = &slot0_partition;
 		zephyr,jpeg = &jpeg0;
 		zephyr,display = &st7735r_160x80;
-		zephyr,camera = &zephyr_camera_dvp;
+		zephyr,camera = &pipe_main;
 	};
 
 	aliases {
@@ -328,21 +328,15 @@
 				&dcmipp_d7_pf1>;
 	pinctrl-names = "default";
 
-	ports {
-		port@0 {
-			reg = <0>;
-			zephyr_camera_dvp_in: endpoint {
-				remote-endpoint-label = "ov2640_ep_out";
-				bus-type = <VIDEO_BUS_TYPE_PARALLEL>;
-				bus-width = <8>;
-				data-shift = <0>;
-				hsync-active = <0>;
-				vsync-active = <0>;
-				pclk-sample = <1>;
-			};
-		};
-		port@1 {
-			zephyr_camera_dvp: endpoint@0 { };
+	port {
+		zephyr_camera_dvp_in: endpoint {
+			remote-endpoint-label = "ov2640_ep_out";
+			bus-type = <VIDEO_BUS_TYPE_PARALLEL>;
+			bus-width = <8>;
+			data-shift = <0>;
+			hsync-active = <0>;
+			vsync-active = <0>;
+			pclk-sample = <1>;
 		};
 	};
 };

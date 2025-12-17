@@ -1,7 +1,7 @@
 
 
-#include <zephyr/drivers/video.h>
 #include <zephyr/drivers/display.h>
+#include <zephyr/drivers/video.h>
 
 #include "gf/video.hpp"
 
@@ -11,18 +11,23 @@ LOG_MODULE_REGISTER(video);
 
 namespace Video {
 
+#if defined(CONFIG_GRINREFLEX_VIDEO_WIDTH) &&                                  \
+    defined(CONFIG_GRINREFLEX_VIDEO_HEIGHT)
+
 static const struct device *video_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_camera));
 static struct video_buffer *buffers[2];
 
 #if defined(CONFIG_GRINREFLEX_JPEG_VIDEO)
-#define SECOND_BUFFER_SIZE (CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * 2)
+#define SECOND_BUFFER_SIZE                                                     \
+  (CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * 2)
 #else
-#define SECOND_BUFFER_SIZE (CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * 2)
+#define SECOND_BUFFER_SIZE                                                     \
+  (CONFIG_GRINREFLEX_VIDEO_WIDTH * CONFIG_GRINREFLEX_VIDEO_HEIGHT * 2)
 #endif
 
 static struct video_buffer second_buffer {};
-__attribute__((aligned(32)))
-static uint8_t video_large_buffer[SECOND_BUFFER_SIZE];
+__attribute__((
+    aligned(32))) static uint8_t video_large_buffer[SECOND_BUFFER_SIZE];
 
 void setup() {
   struct video_format fmt;
@@ -125,10 +130,12 @@ void setup() {
           (char)(fmt.pixelformat >> 8), (char)(fmt.pixelformat >> 16),
           (char)(fmt.pixelformat >> 24), fmt.width, fmt.height, fmt.pitch);
 
+#ifdef LINE_COUNT_HEIGHT
   if (caps.min_line_count != LINE_COUNT_HEIGHT) {
     LOG_ERR("Partial framebuffers not supported by this sample");
     return;
   }
+#endif
   /* Size to allocate for each buffer */
   bsize = fmt.pitch * fmt.height;
 
@@ -177,5 +184,8 @@ void setup() {
 
   LOG_INF("- Capture started");
 }
+
+#endif /*defined(CONFIG_GRINREFLEX_VIDEO_WIDTH) &&                             \
+    defined(CONFIG_GRINREFLEX_VIDEO_HEIGHT)*/
 
 } // namespace Video

@@ -1,10 +1,10 @@
 
 #include <iostream>
-#include <vector>
 #include <lvgl.h>
 #include <lvgl_input_device.h>
 #include <stdio.h>
 #include <string.h>
+#include <vector>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/display.h>
@@ -19,11 +19,11 @@ LOG_MODULE_REGISTER(grinreflex_app);
 
 #include <app/drivers/jpeg.h>
 
+#include "application.h"
 #include "config.hpp"
 #include "gf/lvgl_utils.hpp"
 #include "gf/utils.hpp"
 #include "gf/video.hpp"
-#include "application.h"
 
 static const struct device *video_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_camera));
 static const struct device *display_dev =
@@ -78,7 +78,6 @@ int loop() {
 
   struct video_buffer vbuf {};
   struct video_buffer *vbuf_ptr = &vbuf;
-  struct jpeg_out_prop jpeg_prop;
 
   vbuf_ptr->type = VIDEO_BUF_TYPE_OUTPUT;
 
@@ -88,22 +87,7 @@ int loop() {
     return 0;
   }
 
-#if defined(CONFIG_GRINREFLEX_JPEG_VIDEO)
-  // jpeg_hw_decode(jpeg_dev, (uint8_t *)vbuf_ptr->buffer, vbuf_ptr->bytesused,
-  // jpeg_frame_buffer);
-
-  jpeg_hw_poll(jpeg_dev, 0, &jpeg_prop);
-
-  // printf("JPEG done w = %d, h = %d, color = %d chroma = %d\n",
-  // jpeg_prop.width,
-  //         jpeg_prop.height, jpeg_prop.color_space, jpeg_prop.chroma);
-
-  jpeg_color_convert_helper(jpeg_dev, &jpeg_prop, vbuf_ptr->buffer,
-                            fullFrameBuffer);
-
-#else
   memcpy(fullFrameBuffer, vbuf_ptr->buffer, vbuf_ptr->bytesused);
-#endif
 
   err = video_enqueue(video_dev, vbuf_ptr);
   if (err) {

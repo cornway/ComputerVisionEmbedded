@@ -23,10 +23,6 @@
 	status = "disabled";
 };
 
-&zephyr_camera_dvp {
-	status = "disabled";
-};
-
 &mco1 {
 	status = "disabled";
 };

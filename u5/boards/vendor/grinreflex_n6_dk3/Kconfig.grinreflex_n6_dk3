@@ -8,23 +8,6 @@ config BOARD_GRINREFLEX_N6_DK3
 
 menu "GrinReflex Video settings"
 
-config GRINREFLEX_JPEG_VIDEO
-	bool "Enable jpeg video input"
-	default y
-
-config GRINREFLEX_JPEG_VIDEO_QUALITY
-    int "Set jpeg quality, lower value - higher quality"
-    default 63
-    depends on GRINREFLEX_JPEG_VIDEO
-
-config GRINREFLEX_VIDEO_WIDTH
-    int "Width of a video frame"
-    default 160
-
-config GRINREFLEX_VIDEO_HEIGHT
-    int "Height of a video frame"
-    default 120
-
 config GRINREFLEX_VIDEO_RGB565_SWAP_BYTES
 	bool "Swap rgb565 bytes (e.g. in ov2640 sensor)"
 	default n
