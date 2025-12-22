@@ -18,7 +18,7 @@
 #include "od_pp_output_if.h"
 
 
-/* I/O structures for YoloV2 detector type */
+/* I/O structures for YoloV8 detector type */
 /* --------------------------------------- */
 typedef struct od_yolov8_pp_in_centroid
 {
