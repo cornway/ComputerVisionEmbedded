@@ -18,6 +18,7 @@ manifest:
     - name: zephyr
       remote: origin
       revision: roman/development-n6
+      west-commands: scripts/west-commands.yml
       import:
         # By using name-allowlist we can clone only the modules that are
         # strictly needed by the application.

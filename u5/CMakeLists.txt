@@ -14,4 +14,5 @@ zephyr_include_directories(include)
 add_subdirectory(drivers)
 add_subdirectory(lib)
 add_subdirectory(common)
+add_subdirectory(Models)
 

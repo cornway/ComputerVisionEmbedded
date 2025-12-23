@@ -7,10 +7,9 @@ project(gf_n6_npu)
 
 target_include_directories(app PRIVATE
 include
-Model
 )
 
 target_sources(app PRIVATE
     src/main.c
     src/model.c
-    Model/network.c)
+)

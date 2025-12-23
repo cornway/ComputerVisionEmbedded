@@ -1,0 +1,9 @@
+{
+    "Globals": {},
+    "Profiles": {
+        "default": {
+            "memory_pool": "@MPOOL_FILE_OUT@",
+            "options": "--enable-epoch-controller -O3 --all-buffers-info --mvei --cache-maintenance --Oalt-sched --native-float --enable-virtual-mem-pools --Omax-ca-pipe 4 --Ocache-opt --Os"
+        }
+    }
+}

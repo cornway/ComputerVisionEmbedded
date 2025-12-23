@@ -1,6 +1,13 @@
+# Copyright (c) 2025 STMicroelectronics
+# All rights reserved.
+#
+# This software is licensed under terms that can be found in the LICENSE file
+# in the root directory of this software component.
+# If no LICENSE file comes with this software, it is provided AS-IS.
+
 west-commands:
-  - file: scripts/example_west_command.py
+  - file: scripts/west_flash_weights_command.py
     commands:
-      - name: example-west-command
-        class: ExampleWestCommand
-        help: an example west extension command
+      - name: flash-weights
+        class: FlashWeights
+        help: flash model weights

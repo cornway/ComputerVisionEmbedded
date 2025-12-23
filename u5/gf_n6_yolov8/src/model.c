@@ -43,7 +43,7 @@
 
 LOG_MODULE_REGISTER(model, LOG_LEVEL_INF);
 
-LL_ATON_DECLARE_NAMED_NN_INSTANCE_AND_INTERFACE(Default);
+LL_ATON_DECLARE_NAMED_NN_INSTANCE_AND_INTERFACE(yolov8_obj_det);
 
 /* latest detections and associate mutex */
 static od_pp_outBuffer_t pp_detections_buffer[AI_OD_YOLOV8_PP_TOTAL_BOXES];
@@ -129,9 +129,9 @@ static void model_detection_to_box(od_pp_outBuffer_t *d, struct dbox *b) {
 
 void model_thread_ep(void *arg1, void *arg2, void *arg3) {
   const LL_Buffer_InfoTypeDef *nn_out_info =
-      LL_ATON_Output_Buffers_Info_Default();
+      LL_ATON_Output_Buffers_Info_yolov8_obj_det();
   const LL_Buffer_InfoTypeDef *nn_in_info =
-      LL_ATON_Input_Buffers_Info_Default();
+      LL_ATON_Input_Buffers_Info_yolov8_obj_det();
   const struct device *const camera_aux_dev = arg1;
   od_yolov8_pp_static_param_t pp_params;
   struct video_buffer *vbuf;
@@ -153,7 +153,7 @@ void model_thread_ep(void *arg1, void *arg2, void *arg3) {
   /* Initialize Cube.AI/ATON ... */
   LL_ATON_RT_RuntimeInit();
   /* ... and model instance */
-  LL_ATON_RT_Init_Network(&NN_Instance_Default);
+  LL_ATON_RT_Init_Network(&NN_Instance_yolov8_obj_det);
 
   nn_in_len = LL_Buffer_len(nn_in_info);
   nn_out_len = LL_Buffer_len(nn_out_info);
@@ -178,7 +178,7 @@ void model_thread_ep(void *arg1, void *arg2, void *arg3) {
     /* run inference */
     __ASSERT_NO_MSG(vbuf->bytesused == nn_in_len);
     /* setup input buffer. No need cache ops since full hw path DCMIPP -> NPU */
-    ret = LL_ATON_Set_User_Input_Buffer_Default(0, vbuf->buffer, nn_in_len);
+    ret = LL_ATON_Set_User_Input_Buffer_yolov8_obj_det(0, vbuf->buffer, nn_in_len);
     __ASSERT_NO_MSG(ret == LL_ATON_User_IO_NOERROR);
     /* setup output. Invalidate ouput so post-process access latest inference
      * result */
@@ -186,7 +186,7 @@ void model_thread_ep(void *arg1, void *arg2, void *arg3) {
     __ASSERT_NO_MSG(ret == 0);
     /* let's go */
     tick = HAL_GetTick();
-    Run_Inference(&NN_Instance_Default);
+    Run_Inference(&NN_Instance_yolov8_obj_det);
     tick = HAL_GetTick() - tick;
     latest_inference_time = tick;
 

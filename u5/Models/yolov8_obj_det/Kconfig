@@ -1,0 +1,5 @@
+
+
+config YOLOV8_OBJ_DET
+    bool "Add yolov8 object detection model"
+    default n

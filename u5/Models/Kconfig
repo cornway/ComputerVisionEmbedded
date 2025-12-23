@@ -1,0 +1,7 @@
+
+
+menu "DNN Models"
+
+rsource "yolov8_obj_det/Kconfig"
+
+endmenu
